@@ -116,8 +116,16 @@ def _blob_get_json(path: str, default: Any):
 
     headers = {}
     token = _blob_token()
-    if token and _blob_access() == "private":
+    access = _blob_access()
+    
+    # For private blobs, add authorization header and download parameter
+    if token and access == "private":
         headers["Authorization"] = f"Bearer {token}"
+        # Add download parameter to ensure response is treated as file
+        if "?" not in url:
+            url = f"{url}?download=1"
+        else:
+            url = f"{url}&download=1"
 
     try:
         response = requests.get(url, headers=headers, timeout=_blob_timeout_seconds())
@@ -125,7 +133,10 @@ def _blob_get_json(path: str, default: Any):
             return default
         response.raise_for_status()
         return response.json()
-    except (requests.RequestException, ValueError):
+    except (requests.RequestException, ValueError) as e:
+        # Log error for debugging
+        import sys
+        print(f"Blob read error for {pathname}: {e}", file=sys.stderr)
         return default
 
 
@@ -137,9 +148,10 @@ def _blob_put_json(path: str, data: Any) -> None:
     if not token:
         raise RuntimeError("BLOB_READ_WRITE_TOKEN must be set when JSON_DB_BACKEND=vercel_blob")
 
+    access = _blob_access()
     headers = {
         "Authorization": f"Bearer {token}",
-        "access": _blob_access(),
+        "access": access,
         "x-api-version": _VERCEL_BLOB_API_VERSION,
         "x-content-type": "application/json",
         "x-cache-control-max-age": "60",
@@ -157,6 +169,8 @@ def _blob_put_json(path: str, data: Any) -> None:
         response.raise_for_status()
         result = response.json()
     except (requests.RequestException, ValueError) as exc:
+        import sys
+        print(f"Blob write error for {pathname}: {exc}", file=sys.stderr)
         raise RuntimeError(f"Failed to write JSON to Vercel Blob path '{pathname}': {exc}") from exc
 
     url = result.get("url")
