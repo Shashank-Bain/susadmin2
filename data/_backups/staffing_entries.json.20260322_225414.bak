@@ -1,0 +1,38 @@
+[
+  {
+    "id": "SE001",
+    "date": "2026-03-20",
+    "manager_id": "U003",
+    "employee_id": "E001",
+    "staffing_type": "Project Work",
+    "project_id": "P001",
+    "project_name": "Project Orion",
+    "case_code": "BC101",
+    "hours": 8,
+    "comments": ""
+  },
+  {
+    "id": "SE002",
+    "date": "2026-03-20",
+    "manager_id": "U003",
+    "employee_id": "E002",
+    "staffing_type": "Project Work",
+    "project_id": "P001",
+    "project_name": "Project Orion",
+    "case_code": "BC101",
+    "hours": 8,
+    "comments": ""
+  },
+  {
+    "id": "SE003",
+    "date": "2026-03-20",
+    "manager_id": "U003",
+    "employee_id": "E003",
+    "staffing_type": "Leave",
+    "project_id": "",
+    "project_name": "",
+    "case_code": "",
+    "hours": 8,
+    "comments": "Sick leave"
+  }
+]

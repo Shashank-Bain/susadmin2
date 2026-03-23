@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Manager Home | SusAdmin{% endblock %}
+{% block header_title %}{{ greeting }} {{ current_user.first_name }}{% endblock %}
+{% block header_subtitle %}Manager operating dashboard for staffing and billing visibility{% endblock %}
+{% block content %}
+<div class="header-actions">
+  <div class="dropdown-shell">
+    <button class="btn btn-primary" onclick="toggleDropdown('add-menu')">Add</button>
+    <div class="dropdown-card" id="add-menu">
+      <button class="dropdown-item" onclick="openStaffingModalForToday(); closeDropdown('add-menu')">Staffing Entry</button>
+    </div>
+  </div>
+  <button class="btn btn-secondary" onclick="openModal('reports-modal')">Reports</button>
+</div>
+
+<div class="kpi-grid">
+  {% for item in kpis %}
+  <div class="kpi-card glass"><div class="kpi-label">{{ item.label }}</div><div class="kpi-value">{{ item.value }}</div></div>
+  {% endfor %}
+</div>
+
+<div class="glass section-card">
+  <div class="section-head row-between">
+    <div><h2>Team Gantt</h2></div>
+    <div class="inline-toolbar">
+      <select class="glass-input small-select" onchange="changeDashboardView(this.value)">
+        <option value="weekly" {% if active_view == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if active_view == 'monthly' %}selected{% endif %}>Monthly</option>
+      </select>
+      <button class="icon-btn" type="button" onclick="moveDashboardPeriod('{{ prev_anchor }}')">&lt;</button>
+      <div class="period-pill">{{ period_label }}</div>
+      <button class="icon-btn" type="button" onclick="moveDashboardPeriod('{{ next_anchor }}')">&gt;</button>
+    </div>
+  </div>
+
+  <div class="gantt-board">
+    <div class="gantt-header">
+      <div class="gantt-side-head">Team / Project</div>
+      <div class="gantt-dates" style="grid-template-columns: repeat({{ visible_dates|length }}, minmax(58px, 1fr));">
+        {% for idx in range(visible_dates|length) %}
+        <div class="gantt-date-head">
+          <div class="gantt-date">{{ week_date_labels[idx] }}</div>
+          <div class="gantt-day">{{ week_day_labels[idx] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% for row in gantt_rows %}
+    <div class="gantt-line">
+      <div class="gantt-side-label">
+        <div class="gantt-team">{{ row.team_name }}</div>
+        <div class="gantt-project">{{ row.project_name }}</div>
+      </div>
+
+      <div class="gantt-track" style="grid-template-columns: repeat({{ visible_dates|length }}, minmax(58px, 1fr));">
+        {% if row.is_empty %}
+        <div class="gantt-empty">—</div>
+        {% else %}
+          {% for segment in row.segments %}
+          <div class="gantt-bar-segment" style="{{ segment.style }}">{{ row.project_name }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="glass section-card">
+  <div class="section-head row-between">
+    <div><h2>Team Staffing Timeline</h2></div>
+    <div class="inline-toolbar">
+      <select class="glass-input small-select" onchange="changeDashboardView(this.value)">
+        <option value="weekly" {% if active_view == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if active_view == 'monthly' %}selected{% endif %}>Monthly</option>
+      </select>
+      <button class="icon-btn" type="button" onclick="moveDashboardPeriod('{{ prev_anchor }}')">&lt;</button>
+      <div class="period-pill">{{ period_label }}</div>
+      <button class="icon-btn" type="button" onclick="moveDashboardPeriod('{{ next_anchor }}')">&gt;</button>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Person</th>
+          {% for idx in range(visible_dates|length) %}
+          <th>
+            <div>{{ week_date_labels[idx] }}</div>
+            <div style="font-size: 11px; opacity: 0.75;">{{ week_day_labels[idx] }}</div>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in staffing_rows %}
+        <tr class="{% if not row.has_activity %}dim-row{% endif %}">
+          <td>
+            <div>{{ row.name }}</div>
+            {% if row.designation %}
+            <div style="font-size: 11px; opacity: 0.7;">{{ row.designation }}</div>
+            {% endif %}
+          </td>
+          {% for cell in row.week %}
+          <td>{{ cell }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<datalist id="employee-options">{% for item in employees %}<option value="{{ item.name }}" data-id="{{ item.id }}"></option>{% endfor %}</datalist>
+<datalist id="project-options">{% for item in projects %}<option value="{{ item.project_name }}" data-id="{{ item.id }}" data-case="{{ item.billing_case_code }}"></option>{% endfor %}</datalist>
+
+<div class="modal-backdrop" id="staffing-modal">
+  <div class="modal-card large glass">
+    <div class="modal-head"><div><h3>Staffing Entry</h3></div><button class="icon-btn" onclick="closeModal('staffing-modal')">×</button></div>
+    <div class="toolbar-row">
+      <div class="date-wrap"><label>Date</label><input type="date" id="staffing-date" class="glass-input" /><div class="tiny-inline">Loaded from: <span id="prefill-date-label">—</span></div></div>
+      <div class="button-row"><button class="btn btn-secondary" onclick="openModal('load-modal')">Load</button><button class="btn btn-secondary" onclick="addStaffingRow()">Add Row</button><button class="btn btn-secondary" onclick="clearStaffingRows()">Clear All</button><button class="btn btn-primary" onclick="saveStaffingRows()">Save</button></div>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table compact" id="staffing-table">
+        <thead><tr><th>Employee Name</th><th>Staffing</th><th>Project Name</th><th>Case Code</th><th>Hours</th><th>Comments</th><th></th></tr></thead>
+        <tbody id="staffing-table-body"></tbody>
+      </table>
+    </div>
+    <div class="section-head top-spaced"><h3>Billing Table</h3></div>
+    <div class="table-scroll">
+      <table class="data-table compact" id="billing-table">
+        <thead><tr><th>Project Name</th><th>Project Type</th><th>Case Code</th><th>Billable FTEs</th><th>Billing Amount</th><th>Comments</th></tr></thead>
+        <tbody id="billing-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="load-modal">
+  <div class="modal-card glass small">
+    <div class="modal-head"><div><h3>Load Staffing</h3></div><button class="icon-btn" onclick="closeModal('load-modal')">×</button></div>
+    <div class="form-grid single-col">
+      <div><label>Load From Date</label><input type="date" id="load-date" class="glass-input" /></div>
+      <div class="actions-row"><button class="btn btn-secondary" onclick="closeModal('load-modal')">Cancel</button><button class="btn btn-primary" onclick="loadFromCustomDate()">Load</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="reports-modal">
+  <div class="modal-card glass medium">
+    <div class="modal-head"><div><h3>Reports</h3></div><button class="icon-btn" onclick="closeModal('reports-modal')">×</button></div>
+    <div class="tab-strip"><button class="tab active" onclick="showReportTab('staffing-report-tab', this)">Team Staffing Report</button><button class="tab" onclick="showReportTab('insync-report-tab', this)">Monthly Insync</button></div>
+    <div id="staffing-report-tab" class="report-tab active">{% for item in reports if item.type == 'team_staffing_report' %}<div class="report-row"><span>{{ item.month }}</span><a href="{{ url_for('reports_download', item_id=item.id) }}">{{ item.file_name }}</a></div>{% endfor %}</div>
+    <div id="insync-report-tab" class="report-tab">{% for item in reports if item.type == 'monthly_insync' %}<div class="report-row"><span>{{ item.month }}</span><a href="{{ url_for('reports_download', item_id=item.id) }}">{{ item.file_name }}</a></div>{% endfor %}</div>
+  </div>
+</div>
+
+<script>
+window.staffingConfig = {
+  employees: {{ employees|tojson }},
+  projects: {{ projects|tojson }},
+  staffingTypes: {{ dropdowns.staffing_type|tojson if dropdowns.staffing_type else '[]' }}
+};
+async function loadStaffingPrefill(loadDate = "") {
+  const dateInput = document.getElementById("staffing-date");
+  const prefillDateLabel = document.getElementById("prefill-date-label");
+
+  if (!dateInput) return;
+
+  if (!dateInput.value) {
+    const d = new Date();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    dateInput.value = `${d.getFullYear()}-${month}-${day}`;
+  }
+
+  const params = new URLSearchParams({
+    date: dateInput.value
+  });
+
+  if (loadDate) {
+    params.set("load_date", loadDate);
+  }
+
+  const res = await fetch(`/api/staffing/prefill?${params.toString()}`);
+  const data = await res.json();
+
+  if (prefillDateLabel) {
+    prefillDateLabel.textContent = data.source_date || "—";
+  }
+
+  renderStaffingRows(data.rows || []);
+  renderBillingRows(data.billing_rows || []);
+}
+</script>
+<script>
+function dashboardUrl(view, anchor) {
+  const params = new URLSearchParams(window.location.search);
+  params.set("view", view || "{{ active_view }}");
+  params.set("anchor", anchor || "{{ current_anchor }}");
+  return "{{ url_for('manager_home') }}?" + params.toString();
+}
+
+function changeDashboardView(view) {
+  window.location.href = dashboardUrl(view, "{{ current_anchor }}");
+}
+
+function moveDashboardPeriod(anchor) {
+  window.location.href = dashboardUrl("{{ active_view }}", anchor);
+}
+</script>
+<script>
+function loadFromCustomDate() {
+  const loadDateInput = document.getElementById("load-date");
+  if (!loadDateInput || !loadDateInput.value) return;
+
+  loadStaffingPrefill(loadDateInput.value);
+  closeModal("load-modal");
+}
+function todayIso() {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+function openStaffingModalForToday() {
+  const dateInput = document.getElementById("staffing-date");
+  const loadDateInput = document.getElementById("load-date");
+
+  const today = todayIso();
+  if (dateInput) dateInput.value = today;
+  if (loadDateInput) loadDateInput.value = today;
+
+  openModal("staffing-modal");
+  loadStaffingPrefill();
+}
+</script>
+
+{% endblock %}

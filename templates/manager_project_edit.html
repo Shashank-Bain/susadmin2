@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Edit Project | SusAdmin{% endblock %}
+{% block header_title %}Edit Project{% endblock %}
+{% block header_subtitle %}Update your project{% endblock %}
+
+{% block content %}
+<div class="glass section-card">
+  <div class="section-head"><h2>Edit Project</h2></div>
+
+  <form method="post" class="form-grid">
+    <div><label>Project Name</label><input class="glass-input" name="project_name" value="{{ item.project_name }}"></div>
+    <div><label>Project Type</label><input class="glass-input" name="project_type" value="{{ item.project_type }}"></div>
+    <div><label>Type for Util</label><input class="glass-input" name="type_for_util" value="{{ item.type_for_util }}"></div>
+    <div><label>Billing Case Code</label><input class="glass-input" name="billing_case_code" value="{{ item.billing_case_code }}"></div>
+    <div><label>Client Case Code</label><input class="glass-input" name="client_case_code" value="{{ item.client_case_code }}"></div>
+    <div><label>Product</label><input class="glass-input" name="product" value="{{ item.product }}"></div>
+    <div><label>Requestor</label><input class="glass-input" name="requestor" value="{{ item.requestor }}"></div>
+    <div><label>NPS Contact</label><input class="glass-input" name="nps_contact" value="{{ item.nps_contact }}"></div>
+    <div><label>Case Status</label><input class="glass-input" name="case_status" value="{{ item.case_status }}"></div>
+    <div><label>NPS Status</label><input class="glass-input" name="nps_status" value="{{ item.nps_status }}"></div>
+    <div><label>Case Manager for NPS</label><input class="glass-input" name="case_manager_for_nps" value="{{ item.case_manager_for_nps }}"></div>
+    <div><label>BCN Case Execution Location</label><input class="glass-input" name="bcn_case_execution_location" value="{{ item.bcn_case_execution_location }}"></div>
+    <div><label>Billed to end client</label><input class="glass-input" name="billed_to_end_client" value="{{ item.billed_to_end_client }}"></div>
+    <div><label>Case Type</label><input class="glass-input" name="case_type" value="{{ item.case_type }}"></div>
+    <div><label>Office</label><input class="glass-input" name="office" value="{{ item.office }}"></div>
+    <div><label>Case Manager / Principal</label><input class="glass-input" name="case_manager_principal" value="{{ item.case_manager_principal }}"></div>
+    <div><label>Client Name</label><input class="glass-input" name="client_name" value="{{ item.client_name }}"></div>
+    <div><label>Case Partner</label><input class="glass-input" name="case_partner" value="{{ item.case_partner }}"></div>
+    <div><label>Industry</label><input class="glass-input" name="industry" value="{{ item.industry }}"></div>
+    <div><label>Capability</label><input class="glass-input" name="capability" value="{{ item.capability }}"></div>
+    <div><label>Master Project Name</label><input class="glass-input" name="master_project_name" value="{{ item.master_project_name }}"></div>
+    <div><label>Date of Request</label><input class="glass-input" type="date" name="date_of_request" value="{{ item.date_of_request }}"></div>
+    <div><label>Case Delivery Primary Location</label><input class="glass-input" name="case_delivery_primary_location" value="{{ item.case_delivery_primary_location }}"></div>
+    <div><label>Outside BCN Gurgaon Location</label><input class="glass-input" name="outside_bcn_location" value="{{ item.outside_bcn_location }}"></div>
+    <div><label>Case POC</label><input class="glass-input" name="case_poc" value="{{ item.case_poc }}"></div>
+    <div><label>End Client POC</label><input class="glass-input" name="end_client_poc" value="{{ item.end_client_poc }}"></div>
+
+    <div class="full">
+      <label>Work Description</label>
+      <textarea class="glass-input textarea-input" name="work_description">{{ item.work_description }}</textarea>
+    </div>
+
+    <div class="full">
+      <label>Team</label>
+      <select class="glass-input" name="team_id">
+        {% for team in teams %}
+        <option value="{{ team.id }}" {% if team.id == item.team_id %}selected{% endif %}>{{ team.team_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="full actions-row">
+      <a class="btn btn-secondary" href="{{ url_for('manager_projects') }}">Cancel</a>
+      <button class="btn btn-primary" type="submit">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

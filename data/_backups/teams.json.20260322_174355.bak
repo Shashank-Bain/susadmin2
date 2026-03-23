@@ -1,0 +1,15 @@
+[
+  {
+    "id": "T002",
+    "team_name": "S&R Ops",
+    "team_type": [
+      "Client",
+      "IP"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-Tech",
+    "team_classification_2": "SustainX",
+    "manager_id": "U003",
+    "ombudsperson_employee_id": "E003"
+  }
+]

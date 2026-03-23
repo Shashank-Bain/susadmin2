@@ -1,0 +1,30 @@
+[
+  {
+    "id": "P001",
+    "project_name": "Project Orion",
+    "billing_case_code": "BC101",
+    "client_case_code": "CC101",
+    "project_type": "Client billed",
+    "type_for_util": "Client",
+    "product": "Decarb Analysis",
+    "requestor": "John Doe",
+    "work_description": "Decarbonization workstream support",
+    "nps_contact": "NPS Team",
+    "case_manager_for_nps": "Shashank Yadav",
+    "team_id": "T001"
+  },
+  {
+    "id": "P002",
+    "project_name": "Project Atlas",
+    "billing_case_code": "BC102",
+    "client_case_code": "CC102",
+    "project_type": "IP (Z5LB/J2RC)",
+    "type_for_util": "IP",
+    "product": "ESG Analytics",
+    "requestor": "Jane Roe",
+    "work_description": "ESG analytics and reporting support",
+    "nps_contact": "NPS Team",
+    "case_manager_for_nps": "Samyak Ponangi",
+    "team_id": "T005"
+  }
+]

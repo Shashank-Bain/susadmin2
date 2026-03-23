@@ -1,0 +1,14 @@
+[
+  {
+    "id": "T001",
+    "team_name": "GS Delivery",
+    "team_type": "Core",
+    "manager_id": "U003"
+  },
+  {
+    "id": "T002",
+    "team_name": "S&R Ops",
+    "team_type": "Practice",
+    "manager_id": "U003"
+  }
+]

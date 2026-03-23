@@ -1,0 +1,33 @@
+[
+  {
+    "id": "P001",
+    "project_name": "BCN GS - Carbon (Q1 2026)",
+    "project_type": "IP (Z5LB/J2RC)",
+    "type_for_util": "IP",
+    "billing_case_code": "J2RC",
+    "client_case_code": "",
+    "work_description": "Support Bain Sustainability Practice in overall year long projects for Carbon - Q1 2026",
+    "product": "S@B - Carbon support",
+    "requestor": "Sam Israelit",
+    "nps_contact": "Ben Estabrook",
+    "case_status": "Active",
+    "nps_status": "To be sent",
+    "case_manager_for_nps": "Shashank Yadav",
+    "bcn_case_execution_location": "BCN Gurgaon",
+    "billed_to_end_client": "",
+    "case_type": "",
+    "office": "",
+    "case_manager_principal": "",
+    "client_name": "",
+    "case_partner": "",
+    "industry": "",
+    "capability": "",
+    "master_project_name": "",
+    "date_of_request": "",
+    "case_delivery_primary_location": "",
+    "outside_bcn_location": "",
+    "case_poc": "",
+    "end_client_poc": "",
+    "team_id": "T001"
+  }
+]
