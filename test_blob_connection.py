@@ -8,6 +8,21 @@ Usage:
 
 import os
 import sys
+from pathlib import Path
+
+# Load .env file manually (Python doesn't do this automatically)
+env_file = Path(".env")
+if env_file.exists():
+    for line in env_file.read_text().strip().split("\n"):
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            # Remove quotes if present
+            value = value.strip().strip('"').strip("'")
+            os.environ[key.strip()] = value
+
+# Disable SSL verification for testing (Windows certificate issue)
+os.environ["VERCEL_BLOB_VERIFY_SSL"] = "false"
 
 # Set Blob backend
 os.environ["JSON_DB_BACKEND"] = "vercel_blob"
@@ -34,11 +49,13 @@ if missing:
 
 print("✓ All required env vars are set\n")
 
-from utils.json_db import load_json, _blob_path_from_local_path, _blob_url_from_path, _blob_token, _blob_access
+from utils.json_db import load_json, _blob_path_from_local_path, _blob_url_from_path, _blob_token, _blob_access, _blob_path_prefix
 
 print(f"Backend: Vercel Blob (Private)")
 print(f"Access: {_blob_access()}")
 print(f"Token: {_blob_token()[:20]}...")
+print(f"Prefix env var: '{os.environ.get('VERCEL_BLOB_PREFIX', 'NOT_SET')}'")
+print(f"Prefix function returns: '{_blob_path_prefix()}'")
 print()
 
 # Test 1: Load users.json

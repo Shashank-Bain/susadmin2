@@ -16,6 +16,11 @@ def _blob_backend_enabled() -> bool:
     return (os.environ.get("JSON_DB_BACKEND", "local") or "local").strip().lower() == "vercel_blob"
 
 
+def _blob_ssl_verify() -> bool:
+    # Allow disabling SSL verification for testing/diagnostics
+    return os.environ.get("VERCEL_BLOB_VERIFY_SSL", "true").lower() not in ("false", "0", "no")
+
+
 def _blob_timeout_seconds() -> int:
     raw = (os.environ.get("VERCEL_BLOB_TIMEOUT_SECONDS", "10") or "10").strip()
     try:
@@ -30,7 +35,12 @@ def _blob_token() -> str:
 
 def _blob_path_prefix() -> str:
     # Keep folder-style paths in Blob to mirror the old local data directory.
-    prefix = (os.environ.get("VERCEL_BLOB_PREFIX", "data/") or "data/").strip()
+    # Must check if key exists to distinguish between unset (default) vs empty string
+    if "VERCEL_BLOB_PREFIX" in os.environ:
+        prefix = os.environ["VERCEL_BLOB_PREFIX"].strip()
+    else:
+        prefix = "data/"
+    
     if prefix and not prefix.endswith("/"):
         prefix = f"{prefix}/"
     return prefix
@@ -93,8 +103,8 @@ def _blob_url_from_path(pathname: str) -> Optional[str]:
     params = {"prefix": pathname, "limit": "1000", "mode": "expanded"}
 
     try:
-        response = requests.get(_VERCEL_BLOB_API_BASE_URL, headers=headers, params=params, timeout=_blob_timeout_seconds())
-        response.raise_for_status()
+        response = requests.get(_VERCEL_BLOB_API_BASE_URL, headers=headers, params=params, timeout=_blob_timeout_seconds(), verify=_blob_ssl_verify())
+        response.raise_for_status()  
         result = response.json()
     except (requests.RequestException, ValueError):
         return None
@@ -128,7 +138,7 @@ def _blob_get_json(path: str, default: Any):
             url = f"{url}&download=1"
 
     try:
-        response = requests.get(url, headers=headers, timeout=_blob_timeout_seconds())
+        response = requests.get(url, headers=headers, timeout=_blob_timeout_seconds(), verify=_blob_ssl_verify())
         if response.status_code == 404:
             return default
         response.raise_for_status()
@@ -165,6 +175,7 @@ def _blob_put_json(path: str, data: Any) -> None:
             headers=headers,
             data=payload,
             timeout=_blob_timeout_seconds(),
+            verify=_blob_ssl_verify(),
         )
         response.raise_for_status()
         result = response.json()
