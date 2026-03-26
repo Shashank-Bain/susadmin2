@@ -1826,7 +1826,8 @@ def generate_insync_report_file(month):
     
     # Save the workbook to BytesIO (memory), then upload to blob storage
     filename = f"insync_{month}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    blob_pathname = f"reports/{filename}"
+    # Try simpler pathname without directory structure
+    blob_pathname = f"report-{filename}"
     
     # Save to memory buffer
     buffer = BytesIO()
@@ -1834,11 +1835,16 @@ def generate_insync_report_file(month):
     buffer.seek(0)
     file_content = buffer.read()
     
-    # Upload to blob storage
+    # Debug: Log file size
+    import sys
+    print(f"Generated Excel file: {len(file_content)} bytes", file=sys.stderr)
+    print(f"Blob pathname: {blob_pathname}", file=sys.stderr)
+    
+    # Upload to blob storage with a simpler content-type
     upload_file_to_blob(
         file_content,
         blob_pathname,
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        content_type="application/octet-stream"
     )
     
     return blob_pathname

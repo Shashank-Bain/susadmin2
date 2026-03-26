@@ -242,31 +242,49 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
     if not token:
         raise RuntimeError("BLOB_READ_WRITE_TOKEN must be set to upload files to blob storage")
     
-    access = _blob_access()
+    if not file_content:
+        raise ValueError("file_content cannot be empty")
+    
+    # Use same headers format as working sync script
     headers = {
         "Authorization": f"Bearer {token}",
-        "access": access,
-        "x-api-version": _VERCEL_BLOB_API_VERSION,
+        "access": "private",  # Hardcode to match working example
+        "x-api-version": "10",
         "x-content-type": content_type,
-        "x-cache-control-max-age": "3600",  # Cache for 1 hour
+        "x-cache-control-max-age": "60",  # Match working example
         "x-allow-overwrite": "1",
     }
     
     try:
         response = requests.put(
-            f"{_VERCEL_BLOB_API_BASE_URL}/",
+            "https://blob.vercel-storage.com/",
             params={"pathname": blob_pathname},
             headers=headers,
             data=file_content,
-            timeout=_blob_timeout_seconds(),
+            timeout=30,
             verify=_blob_ssl_verify(),
         )
+        
+        # Log response for debugging
+        import sys
+        print(f"Blob upload response status: {response.status_code}", file=sys.stderr)
+        
+        if response.status_code != 200:
+            print(f"Blob upload failed response: {response.text[:500]}", file=sys.stderr)
+        
         response.raise_for_status()
         result = response.json()
-    except (requests.RequestException, ValueError) as exc:
+    except requests.RequestException as exc:
         import sys
         print(f"Blob upload error for {blob_pathname}: {exc}", file=sys.stderr)
+        if hasattr(exc, 'response') and exc.response is not None:
+            print(f"Response status: {exc.response.status_code}", file=sys.stderr)
+            print(f"Response body: {exc.response.text[:500]}", file=sys.stderr)
         raise RuntimeError(f"Failed to upload file to Vercel Blob path '{blob_pathname}': {exc}") from exc
+    except ValueError as exc:
+        import sys
+        print(f"Blob upload JSON decode error for {blob_pathname}: {exc}", file=sys.stderr)
+        raise RuntimeError(f"Failed to parse response from blob upload for '{blob_pathname}': {exc}") from exc
     
     url = result.get("url")
     if url:
