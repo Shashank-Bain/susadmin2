@@ -245,10 +245,12 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
     if not file_content:
         raise ValueError("file_content cannot be empty")
     
-    # Don't send 'access' header - let the store use its configured access level
+    # Use exact same headers as _blob_put_json which works
+    access = _blob_access()
     headers = {
         "Authorization": f"Bearer {token}",
-        "x-api-version": "10",
+        "access": access,
+        "x-api-version": _VERCEL_BLOB_API_VERSION,
         "x-content-type": content_type,
         "x-cache-control-max-age": "60",
         "x-allow-overwrite": "1",
@@ -257,15 +259,15 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
     import sys
     print(f"[BLOB DEBUG] Uploading to: {blob_pathname}", file=sys.stderr)
     print(f"[BLOB DEBUG] File size: {len(file_content)} bytes", file=sys.stderr)
-    print(f"[BLOB DEBUG] Content-Type: {content_type}", file=sys.stderr)
+    print(f"[BLOB DEBUG] Access level: {access}", file=sys.stderr)
     
     try:
         response = requests.put(
-            "https://blob.vercel-storage.com/",
+            f"{_VERCEL_BLOB_API_BASE_URL}/",
             params={"pathname": blob_pathname},
             headers=headers,
             data=file_content,
-            timeout=30,
+            timeout=_blob_timeout_seconds(),
             verify=_blob_ssl_verify(),
         )
         
@@ -274,21 +276,17 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
         if response.status_code != 200:
             error_body = response.text
             print(f"[BLOB DEBUG] Error response:\n{error_body}", file=sys.stderr)
-            raise RuntimeError(f"Blob upload failed with status {response.status_code}: {error_body}")
         
+        response.raise_for_status()
         result = response.json()
         print(f"[BLOB DEBUG] Upload successful!", file=sys.stderr)
         
-    except requests.RequestException as exc:
-        print(f"[BLOB DEBUG] Request exception: {type(exc).__name__}: {exc}", file=sys.stderr)
+    except (requests.RequestException, ValueError) as exc:
+        import sys
+        print(f"[BLOB DEBUG] Upload exception: {exc}", file=sys.stderr)
         if hasattr(exc, 'response') and exc.response is not None:
-            print(f"[BLOB DEBUG] Response status: {exc.response.status_code}", file=sys.stderr)
-            print(f"[BLOB DEBUG] Response headers: {dict(exc.response.headers)}", file=sys.stderr)
             print(f"[BLOB DEBUG] Response body: {exc.response.text}", file=sys.stderr)
         raise RuntimeError(f"Failed to upload file to Vercel Blob path '{blob_pathname}': {exc}") from exc
-    except ValueError as exc:
-        print(f"[BLOB DEBUG] JSON decode error: {exc}", file=sys.stderr)
-        raise RuntimeError(f"Failed to parse response from blob upload for '{blob_pathname}': {exc}") from exc
     
     url = result.get("url")
     if url:
