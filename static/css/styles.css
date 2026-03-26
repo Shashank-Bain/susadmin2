@@ -935,6 +935,122 @@ a.tab {
   padding: 10px 0;
 }
 
+/* Report Modal Styles */
+.report-controls {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.control-group input[type="month"] {
+  min-width: 180px;
+}
+
+.report-list-container {
+  padding: 16px;
+}
+
+.report-list-container h4 {
+  margin: 0 0 12px 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.report-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s;
+}
+
+.report-item:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.report-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-item-month {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.report-item-date {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.report-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.report-item-actions a,
+.report-item-actions button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.report-download-link {
+  background: rgba(15, 94, 166, 0.1);
+  color: #0f5ea6;
+  font-weight: 600;
+}
+
+.report-download-link:hover {
+  opacity: 0.8;
+}
+
+.report-content {
+  padding: 16px;
+  min-height: 300px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 @media (max-width: 1200px) {
   .kpi-grid {
     grid-template-columns: repeat(3, 1fr);

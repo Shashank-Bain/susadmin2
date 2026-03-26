@@ -46,4 +46,66 @@ function loadFromCustomDate(){const input=document.getElementById("load-date");i
 async function saveStaffingRows(){const date=document.getElementById("staffing-date").value||todayString();const rows=staffingRowsPayload();const billingRows=billingRowsPayload();const res=await fetch("/api/staffing/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({date,rows,billing_rows:billingRows})});const data=await res.json();alert(data.message||"Saved");closeModal("staffing-modal")}
 async function submitProjectForm(event){event.preventDefault();const formData=new FormData(event.target);const res=await fetch("/api/projects/create",{method:"POST",body:formData});const data=await res.json();if(data.ok){alert("Project added. Refresh the page to see it in the current projects list.");event.target.reset()}else{alert(data.message||"Unable to add project")}}
 function showReportTab(id,btn){document.querySelectorAll(".report-tab").forEach(el=>el.classList.remove("active"));document.querySelectorAll(".tab").forEach(el=>el.classList.remove("active"));document.getElementById(id).classList.add("active");btn.classList.add("active")}
-document.addEventListener("DOMContentLoaded",()=>{const staffingDate=document.getElementById("staffing-date");if(staffingDate)staffingDate.value=todayString()})
+
+/* Insync Report Functions */
+function getCurrentMonthString(){const d=new Date();return d.toISOString().slice(0,7)}
+
+function initializeInsyncReportModal(){
+  const monthInput=document.getElementById("insync-month-selector");
+  if(monthInput){monthInput.value=getCurrentMonthString()}
+  loadInsyncReports()
+}
+
+async function generateInsyncReport(){
+  const monthInput=document.getElementById("insync-month-selector");
+  const month=monthInput?monthInput.value:"";
+  if(!month){alert("Please select a month");return}
+  try{
+    const res=await fetch(`/api/reports/insync/generate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({month})});
+    const data=await res.json();
+    if(data.ok){alert("Report generated successfully");loadInsyncReports()}
+    else{alert(data.message||"Error generating report")}
+  }catch(err){console.error(err);alert("Error generating report")}
+}
+
+async function loadInsyncReports(){
+  try{
+    const res=await fetch(`/api/reports/insync/list`);
+    const data=await res.json();
+    renderInsyncReportsList(data.reports||[])
+  }catch(err){console.error(err)}
+}
+
+function renderInsyncReportsList(reports){
+  const listContainer=document.getElementById("insync-reports-list");
+  if(!listContainer)return;
+  if(reports.length===0){listContainer.innerHTML='<p class="muted">No reports generated yet. Select a month and click "Generate Report" to create one.</p>';return}
+  listContainer.innerHTML=reports.map(r=>`
+    <div class="report-item">
+      <div class="report-item-info">
+        <div class="report-item-month">${formatMonthDisplay(r.month)}</div>
+        <div class="report-item-date">Generated: ${formatDate(r.generated_on)}</div>
+      </div>
+      <div class="report-item-actions">
+        <a href="/api/reports/insync/download/${r.id}" class="report-download-link">Download</a>
+      </div>
+    </div>
+  `).join("")
+}
+
+function formatMonthDisplay(month){
+  if(!month||month.length!==7)return month;
+  const[year,monthNum]=month.split("-");
+  const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${monthNames[parseInt(monthNum)-1]} ${year}`
+}
+
+function formatDate(dateStr){
+  try{const d=new Date(dateStr);return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}catch{return dateStr}
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const staffingDate=document.getElementById("staffing-date");
+  if(staffingDate)staffingDate.value=todayString();
+  initializeInsyncReportModal()
+})

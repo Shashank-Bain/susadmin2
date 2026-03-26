@@ -1552,5 +1552,276 @@ def api_projects_create():
     save_projects(rows)
     return jsonify({"ok": True, "project": item})
 
+@app.route("/api/reports/insync/generate", methods=["POST"])
+@login_required
+def api_insync_generate():
+    """Generate an Insync report for a given month."""
+    payload = request.get_json(force=True)
+    month = payload.get("month", "")
+    
+    if not month:
+        return jsonify({"ok": False, "message": "Month is required"})
+    
+    # Check if report already exists for this month
+    reports = get_reports()
+    existing_report = next((r for r in reports if r.get("type") == "monthly_insync" and r.get("month") == month), None)
+    
+    try:
+        # Generate the report file
+        report_file = generate_insync_report_file(month)
+        
+        if existing_report:
+            # Replace the existing report
+            report_id = existing_report["id"]
+            # Delete old file if it exists
+            old_file = existing_report.get("stored_file")
+            if old_file and os.path.exists(os.path.join(UPLOAD_DIR, old_file)):
+                os.remove(os.path.join(UPLOAD_DIR, old_file))
+            # Update existing record
+            existing_report["stored_file"] = report_file
+            existing_report["generated_on"] = datetime.now().isoformat()
+            existing_report["file_name"] = f"insync_{month}.xlsx"
+        else:
+            # Create new report record
+            report_id = next_id("RPT", reports)
+            reports.append({
+                "id": report_id,
+                "type": "monthly_insync",
+                "month": month,
+                "generated_on": datetime.now().isoformat(),
+                "file_name": f"insync_{month}.xlsx",
+                "stored_file": report_file
+            })
+        
+        save_reports(reports)
+        return jsonify({"ok": True, "message": "Report generated successfully", "report_id": report_id})
+    
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Error generating report: {str(e)}"})
+
+@app.route("/api/reports/insync/list")
+@login_required
+def api_insync_list():
+    """Get all Insync reports sorted reverse chronologically by month."""
+    reports = get_reports()
+    insync_reports = [r for r in reports if r.get("type") == "monthly_insync"]
+    
+    # Sort reverse chronologically by month (so newer months first)
+    insync_reports.sort(key=lambda x: x.get("month", ""), reverse=True)
+    
+    return jsonify({"ok": True, "reports": insync_reports})
+
+@app.route("/api/reports/insync/download/<item_id>")
+@login_required
+def api_insync_download(item_id):
+    """Download an Insync report file."""
+    reports = get_reports()
+    report = next((r for r in reports if r.get("id") == item_id and r.get("type") == "monthly_insync"), None)
+    
+    if not report:
+        flash("Report not found.", "error")
+        return redirect(url_for("route_by_role"))
+    
+    stored_file = report.get("stored_file", "")
+    file_path = os.path.join(UPLOAD_DIR, stored_file)
+    
+    if stored_file and os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True, download_name=report.get("file_name") or stored_file)
+    
+    flash("Report file not found.", "error")
+    return redirect(request.referrer or url_for("route_by_role"))
+
+def generate_insync_report_file(month):
+    """
+    Generate an Insync report Excel file for the given month based on Insync.xlsx template.
+    
+    Args:
+        month: Month string in format "YYYY-MM"
+    
+    Returns:
+        The stored filename relative to UPLOAD_DIR
+    """
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise ImportError("openpyxl is required for generating Insync reports. Please install it.")
+    
+    # Define column headers matching Insync.xlsx structure
+    headers = [
+        "Cluster", "CoE", "BU (Dropdown)", "Team Code (Dropdown)", 
+        "CoE Lead + Director (Dropdown)", "S/TM Manager (Dropdown)", 
+        "Team Name for CTSU", "CTSU Ombudsperson", "Year", "Month", "Day", "Type", "Date",
+        "Project Name (Dropdown)", "Billing Case code", "Client Case Code",
+        "Work Description (Be specific and explanatory about the work tasks)",
+        "Product (Dropdown)", "Requestor", "NPS Contact", 
+        "Case Status (Dropdown)", "NPS Status (Dropdown)",
+        "Case Manager against whom NPS will be reported", "BCN Case Execution Location",
+        "Billed to end client as Fees/ Expense", "Case type", "Office",
+        "Case Manager/ Principal", "Client name", "Case Partner",
+        "Industry (Dropdown)", "Capability (Dropdown)", "Unique_Code",
+        "Billed Team Size", "Actual Billing", "Potential Billing"
+    ]
+    
+    # Get manager's team and employees
+    user = session.get("user")
+    if not user:
+        raise ValueError("No user session found")
+    
+    teams = [t for t in get_teams() if t.get("manager_id") == user["id"]]
+    team_ids = {t["id"] for t in teams}
+    employees = [e for e in get_employees() if e.get("team_id") in team_ids]
+    
+    # Add employee columns to headers
+    employee_headers = [f"{e.get('name', 'Unknown')} ({e.get('id', '')})" for e in employees]
+    all_headers = headers + employee_headers
+    
+    # Get staffing entries for this month
+    year, month_num = month.split("-")
+    staffing_entries = get_staffing_entries()
+    manager_entries = [
+        s for s in staffing_entries 
+        if s.get("manager_id") == user["id"] and s.get("date", "").startswith(month)
+    ]
+    
+    # Group entries by date and project
+    from collections import defaultdict
+    entries_by_date_project = defaultdict(lambda: defaultdict(list))
+    
+    for entry in manager_entries:
+        date = entry.get("date", "")
+        project_name = entry.get("project_name", "")
+        entries_by_date_project[date][project_name].append(entry)
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Insync {month}"
+    
+    # Write headers
+    header_fill = PatternFill(start_color="1f2328", end_color="1f2328", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=10)
+    
+    for col_idx, header in enumerate(all_headers, 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        
+        # Set column widths
+        if col_idx <= 13:
+            ws.column_dimensions[cell.column_letter].width = 12
+        elif col_idx <= 36:
+            ws.column_dimensions[cell.column_letter].width = 15
+        else:
+            ws.column_dimensions[cell.column_letter].width = 18
+    
+    # Write data rows
+    row_idx = 2
+    projects = get_projects()
+    project_map = {p["id"]: p for p in projects}
+    
+    for date in sorted(entries_by_date_project.keys()):
+        for project_name, entries in entries_by_date_project[date].items():
+            # Get project details
+            project = None
+            for entry in entries:
+                if entry.get("project_id") and entry["project_id"] in project_map:
+                    project = project_map[entry["project_id"]]
+                    break
+            
+            # Parse date
+            try:
+                date_obj = datetime.strptime(date, "%Y-%m-%d")
+                year_val = date_obj.year
+                month_val = date_obj.month
+                day_val = date_obj.day
+                weekday = date_obj.weekday()
+                day_type = "Workday" if weekday < 5 else "Weekend"
+            except:
+                year_val, month_val, day_val, day_type = year, month_num, "", "Workday"
+            
+            # Get team info
+            team = teams[0] if teams else {}
+            
+            # Write project metadata columns (1-36)
+            ws.cell(row=row_idx, column=1).value = "Data & Tech"  # Cluster
+            ws.cell(row=row_idx, column=2).value = "Sustainability"  # CoE
+            ws.cell(row=row_idx, column=3).value = team.get("team_name", "")  # BU
+            ws.cell(row=row_idx, column=4).value = team.get("team_name", "")  # Team Code
+            ws.cell(row=row_idx, column=5).value = ""  # CoE Lead + Director
+            ws.cell(row=row_idx, column=6).value = f"{user.get('first_name', '')} {user.get('last_name', '')}"  # Manager
+            ws.cell(row=row_idx, column=7).value = team.get("team_name", "")  # Team Name for CTSU
+            ws.cell(row=row_idx, column=8).value = ""  # CTSU Ombudsperson
+            ws.cell(row=row_idx, column=9).value = year_val  # Year
+            ws.cell(row=row_idx, column=10).value = month_val  # Month
+            ws.cell(row=row_idx, column=11).value = day_val  # Day
+            ws.cell(row=row_idx, column=12).value = day_type  # Type
+            ws.cell(row=row_idx, column=13).value = date  # Date
+            ws.cell(row=row_idx, column=14).value = project_name  # Project Name
+            ws.cell(row=row_idx, column=15).value = project.get("billing_case_code", "") if project else ""  # Billing Case code
+            ws.cell(row=row_idx, column=16).value = project.get("client_case_code", "") if project else ""  # Client Case Code
+            ws.cell(row=row_idx, column=17).value = project.get("work_description", "") if project else ""  # Work Description
+            ws.cell(row=row_idx, column=18).value = project.get("product", "") if project else ""  # Product
+            ws.cell(row=row_idx, column=19).value = project.get("requestor", "") if project else ""  # Requestor
+            ws.cell(row=row_idx, column=20).value = project.get("nps_contact", "") if project else ""  # NPS Contact
+            ws.cell(row=row_idx, column=21).value = project.get("case_status", "") if project else ""  # Case Status
+            ws.cell(row=row_idx, column=22).value = project.get("nps_status", "") if project else ""  # NPS Status
+            ws.cell(row=row_idx, column=23).value = project.get("case_manager_for_nps", "") if project else ""  # Case Manager
+            ws.cell(row=row_idx, column=24).value = project.get("bcn_case_execution_location", "") if project else ""  # BCN Location
+            ws.cell(row=row_idx, column=25).value = project.get("billed_to_end_client", "") if project else ""  # Billed to end client
+            ws.cell(row=row_idx, column=26).value = project.get("case_type", "") if project else ""  # Case type
+            ws.cell(row=row_idx, column=27).value = project.get("office", "") if project else ""  # Office
+            ws.cell(row=row_idx, column=28).value = project.get("case_manager_principal", "") if project else ""  # Case Manager/Principal
+            ws.cell(row=row_idx, column=29).value = project.get("client_name", "") if project else ""  # Client name
+            ws.cell(row=row_idx, column=30).value = project.get("case_partner", "") if project else ""  # Case Partner
+            ws.cell(row=row_idx, column=31).value = project.get("industry", "") if project else ""  # Industry
+            ws.cell(row=row_idx, column=32).value = project.get("capability", "") if project else ""  # Capability
+            ws.cell(row=row_idx, column=33).value = ""  # Unique_Code
+            
+            # Calculate team size and billing
+            team_size = len(set(e.get("employee_id") for e in entries if e.get("employee_id")))
+            total_hours = sum(float(e.get("hours", 0) or 0) for e in entries)
+            
+            ws.cell(row=row_idx, column=34).value = team_size  # Billed Team Size
+            ws.cell(row=row_idx, column=35).value = total_hours * 10  # Actual Billing (placeholder calculation)
+            ws.cell(row=row_idx, column=36).value = ""  # Potential Billing
+            
+            # Write employee columns (37+)
+            employee_map = {e["id"]: e for e in employees}
+            for emp_idx, emp in enumerate(employees):
+                col_idx = 37 + emp_idx
+                # Find this employee's entry for this date/project
+                emp_entry = next((e for e in entries if e.get("employee_id") == emp["id"]), None)
+                
+                if emp_entry:
+                    hours = float(emp_entry.get("hours", 0) or 0)
+                    staffing_type = emp_entry.get("staffing_type", "")
+                    if hours > 0:
+                        ws.cell(row=row_idx, column=col_idx).value = f"Regular Hours ({hours}h)"
+                    elif staffing_type:
+                        ws.cell(row=row_idx, column=col_idx).value = staffing_type
+                    else:
+                        ws.cell(row=row_idx, column=col_idx).value = ""
+                else:
+                    ws.cell(row=row_idx, column=col_idx).value = ""
+            
+            row_idx += 1
+    
+    # If no data, add a placeholder row
+    if row_idx == 2:
+        ws.cell(row=2, column=1).value = "No data for this month"
+    
+    # Freeze top row
+    ws.freeze_panes = "A2"
+    
+    # Save the file
+    filename = f"insync_{month}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    wb.save(file_path)
+    
+    return filename
+
 if __name__ == "__main__":
     app.run(debug=True)

@@ -150,11 +150,35 @@
 </div>
 
 <div class="modal-backdrop" id="reports-modal">
-  <div class="modal-card glass medium">
+  <div class="modal-card glass large">
     <div class="modal-head"><div><h3>Reports</h3></div><button class="icon-btn" onclick="closeModal('reports-modal')">×</button></div>
-    <div class="tab-strip"><button class="tab active" onclick="showReportTab('staffing-report-tab', this)">Team Staffing Report</button><button class="tab" onclick="showReportTab('insync-report-tab', this)">Monthly Insync</button></div>
-    <div id="staffing-report-tab" class="report-tab active">{% for item in reports if item.type == 'team_staffing_report' %}<div class="report-row"><span>{{ item.month }}</span><a href="{{ url_for('reports_download', item_id=item.id) }}">{{ item.file_name }}</a></div>{% endfor %}</div>
-    <div id="insync-report-tab" class="report-tab">{% for item in reports if item.type == 'monthly_insync' %}<div class="report-row"><span>{{ item.month }}</span><a href="{{ url_for('reports_download', item_id=item.id) }}">{{ item.file_name }}</a></div>{% endfor %}</div>
+    <div class="tab-strip">
+      <button class="tab active" onclick="showReportTab('billing-report-tab', this)">Billing Report</button>
+      <button class="tab" onclick="showReportTab('insync-report-tab', this)">Insync</button>
+    </div>
+    
+    <div id="billing-report-tab" class="report-tab active">
+      <div class="report-content">
+        <p class="muted">Billing reports will be displayed here.</p>
+      </div>
+    </div>
+    
+    <div id="insync-report-tab" class="report-tab">
+      <div class="report-controls">
+        <div class="control-group">
+          <label>Select Month</label>
+          <input type="month" id="insync-month-selector" class="glass-input" value="">
+        </div>
+        <button class="btn btn-primary" onclick="generateInsyncReport()">Generate Report</button>
+      </div>
+      
+      <div class="report-list-container">
+        <h4>Generated Reports</h4>
+        <div id="insync-reports-list" class="reports-list">
+          <p class="muted">No reports generated yet. Select a month and click "Generate Report" to create one.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
