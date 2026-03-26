@@ -221,3 +221,121 @@ def save_json(path: str, data: Any) -> None:
         shutil.copy2(path, os.path.join(backup_dir, f"{os.path.basename(path)}.{stamp}.bak"))
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+
+
+def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: str = "application/octet-stream") -> str:
+    """
+    Upload a binary file to Vercel Blob storage.
+    
+    Args:
+        file_content: The binary content of the file
+        blob_pathname: The pathname in blob storage (e.g., "reports/insync_2026-03.xlsx")
+        content_type: MIME type of the file (default: application/octet-stream)
+    
+    Returns:
+        The URL of the uploaded blob
+    
+    Raises:
+        RuntimeError: If upload fails or BLOB_READ_WRITE_TOKEN is not set
+    """
+    token = _blob_token()
+    if not token:
+        raise RuntimeError("BLOB_READ_WRITE_TOKEN must be set to upload files to blob storage")
+    
+    access = _blob_access()
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "access": access,
+        "x-api-version": _VERCEL_BLOB_API_VERSION,
+        "x-content-type": content_type,
+        "x-cache-control-max-age": "3600",  # Cache for 1 hour
+        "x-allow-overwrite": "1",
+    }
+    
+    try:
+        response = requests.put(
+            f"{_VERCEL_BLOB_API_BASE_URL}/",
+            params={"pathname": blob_pathname},
+            headers=headers,
+            data=file_content,
+            timeout=_blob_timeout_seconds(),
+            verify=_blob_ssl_verify(),
+        )
+        response.raise_for_status()
+        result = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        import sys
+        print(f"Blob upload error for {blob_pathname}: {exc}", file=sys.stderr)
+        raise RuntimeError(f"Failed to upload file to Vercel Blob path '{blob_pathname}': {exc}") from exc
+    
+    url = result.get("url")
+    if url:
+        _BLOB_URL_CACHE[blob_pathname] = str(url)
+        return str(url)
+    else:
+        raise RuntimeError(f"No URL returned from blob upload for '{blob_pathname}'")
+
+
+def get_blob_download_url(blob_pathname: str) -> Optional[str]:
+    """
+    Get the download URL for a blob file.
+    
+    Args:
+        blob_pathname: The pathname in blob storage
+    
+    Returns:
+        The download URL, or None if not found
+    """
+    url = _blob_url_from_path(blob_pathname)
+    if not url:
+        return None
+    
+    token = _blob_token()
+    access = _blob_access()
+    
+    # For private blobs, add download parameter
+    if token and access == "private":
+        if "?" not in url:
+            url = f"{url}?download=1"
+        else:
+            url = f"{url}&download=1"
+    
+    return url
+
+
+def download_blob_file(blob_pathname: str) -> Optional[bytes]:
+    """
+    Download a binary file from Vercel Blob storage.
+    
+    Args:
+        blob_pathname: The pathname in blob storage
+    
+    Returns:
+        The file content as bytes, or None if not found
+    """
+    url = _blob_url_from_path(blob_pathname)
+    if not url:
+        return None
+    
+    headers = {}
+    token = _blob_token()
+    access = _blob_access()
+    
+    # For private blobs, add authorization header and download parameter
+    if token and access == "private":
+        headers["Authorization"] = f"Bearer {token}"
+        if "?" not in url:
+            url = f"{url}?download=1"
+        else:
+            url = f"{url}&download=1"
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=_blob_timeout_seconds(), verify=_blob_ssl_verify())
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.content
+    except requests.RequestException as e:
+        import sys
+        print(f"Blob download error for {blob_pathname}: {e}", file=sys.stderr)
+        return None

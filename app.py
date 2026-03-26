@@ -3,7 +3,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from io import StringIO, BytesIO
 import csv, os
-from utils.json_db import load_json, save_json
+from utils.json_db import load_json, save_json, upload_file_to_blob, download_blob_file
 
 app = Flask(__name__)
 app.secret_key = "change-this-in-production"
@@ -1567,18 +1567,14 @@ def api_insync_generate():
     existing_report = next((r for r in reports if r.get("type") == "monthly_insync" and r.get("month") == month), None)
     
     try:
-        # Generate the report file
-        report_file = generate_insync_report_file(month)
+        # Generate the report file and upload to blob storage
+        blob_pathname = generate_insync_report_file(month)
         
         if existing_report:
             # Replace the existing report
             report_id = existing_report["id"]
-            # Delete old file if it exists
-            old_file = existing_report.get("stored_file")
-            if old_file and os.path.exists(os.path.join(UPLOAD_DIR, old_file)):
-                os.remove(os.path.join(UPLOAD_DIR, old_file))
-            # Update existing record
-            existing_report["stored_file"] = report_file
+            # Update existing record (blob storage allows overwrite)
+            existing_report["blob_pathname"] = blob_pathname
             existing_report["generated_on"] = datetime.now().isoformat()
             existing_report["file_name"] = f"insync_{month}.xlsx"
         else:
@@ -1590,7 +1586,7 @@ def api_insync_generate():
                 "month": month,
                 "generated_on": datetime.now().isoformat(),
                 "file_name": f"insync_{month}.xlsx",
-                "stored_file": report_file
+                "blob_pathname": blob_pathname
             })
         
         save_reports(reports)
@@ -1622,13 +1618,25 @@ def api_insync_download(item_id):
         flash("Report not found.", "error")
         return redirect(url_for("route_by_role"))
     
-    stored_file = report.get("stored_file", "")
-    file_path = os.path.join(UPLOAD_DIR, stored_file)
+    blob_pathname = report.get("blob_pathname", "")
     
-    if stored_file and os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True, download_name=report.get("file_name") or stored_file)
+    if not blob_pathname:
+        flash("Report file path not found.", "error")
+        return redirect(request.referrer or url_for("route_by_role"))
     
-    flash("Report file not found.", "error")
+    # Download file from blob storage
+    file_content = download_blob_file(blob_pathname)
+    
+    if file_content:
+        # Send file from memory
+        return send_file(
+            BytesIO(file_content),
+            as_attachment=True,
+            download_name=report.get("file_name") or "report.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
+    flash("Report file not found in storage.", "error")
     return redirect(request.referrer or url_for("route_by_role"))
 
 def generate_insync_report_file(month):
@@ -1816,12 +1824,24 @@ def generate_insync_report_file(month):
     # Freeze top row
     ws.freeze_panes = "A2"
     
-    # Save the file
+    # Save the workbook to BytesIO (memory), then upload to blob storage
     filename = f"insync_{month}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    wb.save(file_path)
+    blob_pathname = f"reports/{filename}"
     
-    return filename
+    # Save to memory buffer
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    file_content = buffer.read()
+    
+    # Upload to blob storage
+    upload_file_to_blob(
+        file_content,
+        blob_pathname,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    return blob_pathname
 
 if __name__ == "__main__":
     app.run(debug=True)
