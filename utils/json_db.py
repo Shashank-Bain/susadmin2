@@ -248,12 +248,17 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
     # Use same headers format as working sync script
     headers = {
         "Authorization": f"Bearer {token}",
-        "access": "private",  # Hardcode to match working example
+        "access": "private",
         "x-api-version": "10",
         "x-content-type": content_type,
-        "x-cache-control-max-age": "60",  # Match working example
+        "x-cache-control-max-age": "60",
         "x-allow-overwrite": "1",
     }
+    
+    import sys
+    print(f"[BLOB DEBUG] Uploading to: {blob_pathname}", file=sys.stderr)
+    print(f"[BLOB DEBUG] File size: {len(file_content)} bytes", file=sys.stderr)
+    print(f"[BLOB DEBUG] Content-Type: {content_type}", file=sys.stderr)
     
     try:
         response = requests.put(
@@ -265,30 +270,31 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
             verify=_blob_ssl_verify(),
         )
         
-        # Log response for debugging
-        import sys
-        print(f"Blob upload response status: {response.status_code}", file=sys.stderr)
+        print(f"[BLOB DEBUG] Response status: {response.status_code}", file=sys.stderr)
         
         if response.status_code != 200:
-            print(f"Blob upload failed response: {response.text[:500]}", file=sys.stderr)
+            error_body = response.text
+            print(f"[BLOB DEBUG] Error response:\n{error_body}", file=sys.stderr)
+            raise RuntimeError(f"Blob upload failed with status {response.status_code}: {error_body}")
         
-        response.raise_for_status()
         result = response.json()
+        print(f"[BLOB DEBUG] Upload successful!", file=sys.stderr)
+        
     except requests.RequestException as exc:
-        import sys
-        print(f"Blob upload error for {blob_pathname}: {exc}", file=sys.stderr)
+        print(f"[BLOB DEBUG] Request exception: {type(exc).__name__}: {exc}", file=sys.stderr)
         if hasattr(exc, 'response') and exc.response is not None:
-            print(f"Response status: {exc.response.status_code}", file=sys.stderr)
-            print(f"Response body: {exc.response.text[:500]}", file=sys.stderr)
+            print(f"[BLOB DEBUG] Response status: {exc.response.status_code}", file=sys.stderr)
+            print(f"[BLOB DEBUG] Response headers: {dict(exc.response.headers)}", file=sys.stderr)
+            print(f"[BLOB DEBUG] Response body: {exc.response.text}", file=sys.stderr)
         raise RuntimeError(f"Failed to upload file to Vercel Blob path '{blob_pathname}': {exc}") from exc
     except ValueError as exc:
-        import sys
-        print(f"Blob upload JSON decode error for {blob_pathname}: {exc}", file=sys.stderr)
+        print(f"[BLOB DEBUG] JSON decode error: {exc}", file=sys.stderr)
         raise RuntimeError(f"Failed to parse response from blob upload for '{blob_pathname}': {exc}") from exc
     
     url = result.get("url")
     if url:
         _BLOB_URL_CACHE[blob_pathname] = str(url)
+        print(f"[BLOB DEBUG] Cached URL: {url}", file=sys.stderr)
         return str(url)
     else:
         raise RuntimeError(f"No URL returned from blob upload for '{blob_pathname}'")
