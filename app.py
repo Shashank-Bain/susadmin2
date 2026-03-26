@@ -3,7 +3,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from io import StringIO, BytesIO
 import csv, os
-from utils.json_db import load_json, save_json, upload_file_to_blob, download_blob_file
+from utils.json_db import load_json, save_json
 
 app = Flask(__name__)
 app.secret_key = "change-this-in-production"
@@ -1567,26 +1567,23 @@ def api_insync_generate():
     existing_report = next((r for r in reports if r.get("type") == "monthly_insync" and r.get("month") == month), None)
     
     try:
-        # Generate the report file and upload to blob storage
-        blob_pathname = generate_insync_report_file(month)
-        
+        # Validate that report can be generated for this month.
+        generate_insync_report_bytes(month)
+
         if existing_report:
-            # Replace the existing report
             report_id = existing_report["id"]
-            # Update existing record (blob storage allows overwrite)
-            existing_report["blob_pathname"] = blob_pathname
             existing_report["generated_on"] = datetime.now().isoformat()
             existing_report["file_name"] = f"insync_{month}.xlsx"
+            if "blob_pathname" in existing_report:
+                del existing_report["blob_pathname"]
         else:
-            # Create new report record
             report_id = next_id("RPT", reports)
             reports.append({
                 "id": report_id,
                 "type": "monthly_insync",
                 "month": month,
                 "generated_on": datetime.now().isoformat(),
-                "file_name": f"insync_{month}.xlsx",
-                "blob_pathname": blob_pathname
+                "file_name": f"insync_{month}.xlsx"
             })
         
         save_reports(reports)
@@ -1618,28 +1615,19 @@ def api_insync_download(item_id):
         flash("Report not found.", "error")
         return redirect(url_for("route_by_role"))
     
-    blob_pathname = report.get("blob_pathname", "")
-    
-    if not blob_pathname:
-        flash("Report file path not found.", "error")
-        return redirect(request.referrer or url_for("route_by_role"))
-    
-    # Download file from blob storage
-    file_content = download_blob_file(blob_pathname)
-    
-    if file_content:
-        # Send file from memory
+    try:
+        file_content = generate_insync_report_bytes(report.get("month", ""))
         return send_file(
             BytesIO(file_content),
             as_attachment=True,
             download_name=report.get("file_name") or "report.xlsx",
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-    
-    flash("Report file not found in storage.", "error")
-    return redirect(request.referrer or url_for("route_by_role"))
+    except Exception as e:
+        flash(f"Unable to generate report download: {str(e)}", "error")
+        return redirect(request.referrer or url_for("route_by_role"))
 
-def generate_insync_report_file(month):
+def generate_insync_report_bytes(month):
     """
     Generate an Insync report Excel file for the given month based on Insync.xlsx template.
     
@@ -1824,30 +1812,11 @@ def generate_insync_report_file(month):
     # Freeze top row
     ws.freeze_panes = "A2"
     
-    # Save the workbook to BytesIO (memory), then upload to blob storage
-    # Use simple filename with no special characters
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    filename = f"insync{month.replace('-', '')}{timestamp}.xlsx"
-    
-    # Save to memory buffer
+    # Save workbook to memory and return bytes.
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    file_content = buffer.read()
-    
-    # Debug: Log file size
-    import sys
-    print(f"Generated Excel file: {len(file_content)} bytes", file=sys.stderr)
-    print(f"Blob pathname: {filename}", file=sys.stderr)
-    
-    # Upload to blob storage with a simpler content-type
-    upload_file_to_blob(
-        file_content,
-        filename,
-        content_type="application/octet-stream"
-    )
-    
-    return filename
+    return buffer.read()
 
 if __name__ == "__main__":
     app.run(debug=True)
