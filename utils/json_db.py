@@ -245,10 +245,9 @@ def upload_file_to_blob(file_content: bytes, blob_pathname: str, content_type: s
     if not file_content:
         raise ValueError("file_content cannot be empty")
     
-    # Use same headers format as working sync script
+    # Don't send 'access' header - let the store use its configured access level
     headers = {
         "Authorization": f"Bearer {token}",
-        "access": "private",
         "x-api-version": "10",
         "x-content-type": content_type,
         "x-cache-control-max-age": "60",
