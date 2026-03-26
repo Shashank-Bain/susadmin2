@@ -158,17 +158,15 @@ def _blob_put_json(path: str, data: Any) -> None:
     if not token:
         raise RuntimeError("BLOB_READ_WRITE_TOKEN must be set when JSON_DB_BACKEND=vercel_blob")
 
-    access = _blob_access()
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "access": access,
-        "x-api-version": _VERCEL_BLOB_API_VERSION,
-        "x-content-type": "application/json",
-        "x-cache-control-max-age": "60",
-        "x-allow-overwrite": "1",
-    }
-
-    try:
+    def _put_with_access(access_value: str):
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "access": access_value,
+            "x-api-version": _VERCEL_BLOB_API_VERSION,
+            "x-content-type": "application/json",
+            "x-cache-control-max-age": "60",
+            "x-allow-overwrite": "1",
+        }
         response = requests.put(
             f"{_VERCEL_BLOB_API_BASE_URL}/",
             params={"pathname": pathname},
@@ -177,12 +175,30 @@ def _blob_put_json(path: str, data: Any) -> None:
             timeout=_blob_timeout_seconds(),
             verify=_blob_ssl_verify(),
         )
+        return response
+
+    access = _blob_access()
+    try:
+        response = _put_with_access(access)
+        if response.status_code >= 400:
+            body = response.text or ""
+            # Auto-recover from store access mismatch (private vs public)
+            if "Cannot use public access on a private store" in body and access != "private":
+                response = _put_with_access("private")
+            elif "Cannot use private access on a public store" in body and access != "public":
+                response = _put_with_access("public")
+
         response.raise_for_status()
         result = response.json()
     except (requests.RequestException, ValueError) as exc:
         import sys
-        print(f"Blob write error for {pathname}: {exc}", file=sys.stderr)
-        raise RuntimeError(f"Failed to write JSON to Vercel Blob path '{pathname}': {exc}") from exc
+        response_body = ""
+        response_obj = getattr(exc, "response", None)
+        if response_obj is not None:
+            response_body = (response_obj.text or "")[:500]
+        print(f"Blob write error for {pathname}: {exc} | body={response_body}", file=sys.stderr)
+        extra = f" | response={response_body}" if response_body else ""
+        raise RuntimeError(f"Failed to write JSON to Vercel Blob path '{pathname}': {exc}{extra}") from exc
 
     url = result.get("url")
     if url:
