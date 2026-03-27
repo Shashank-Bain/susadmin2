@@ -10,6 +10,14 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Import Postgres DB if backend is postgres
+USE_POSTGRES = os.getenv("JSON_DB_BACKEND") == "postgres"
+if USE_POSTGRES:
+    from utils import postgres_db as db_backend
+else:
+    # Will use json_db functions below
+    db_backend = None
+
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -32,32 +40,104 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def data_path(name): return f"{DATA_DIR}/{name}"
 
+# Database access functions - switch between Postgres and JSON based on backend
 def get_users():
+    if USE_POSTGRES:
+        return db_backend.get_users()
     users = load_json(data_path("users.json"), [])
     app.logger.info(f"[DATA] Loaded {len(users)} users from {data_path('users.json')}")
     return users
 
-def get_teams(): return load_json(data_path("teams.json"), [])
-def get_employees(): return load_json(data_path("employees.json"), [])
-def get_projects(): return load_json(data_path("projects.json"), [])
-def get_billing_rates(): return load_json(data_path("billing_rates.json"), [])
-def get_cost_rates(): return load_json(data_path("cost_rates.json"), [])
-def get_staffing_entries(): return load_json(data_path("staffing_entries.json"), [])
-def get_billing_entries(): return load_json(data_path("billing_entries.json"), [])
-def get_reports(): return load_json(data_path("reports.json"), [])
-def get_insync_employee_orders(): return load_json(data_path("insync_employee_orders.json"), {})
-def get_dropdown_options(): return load_json(data_path("dropdown_options.json"), {})
+def get_teams():
+    return db_backend.get_teams() if USE_POSTGRES else load_json(data_path("teams.json"), [])
 
-def save_staffing_entries(rows): save_json(data_path("staffing_entries.json"), rows)
-def save_billing_entries(rows): save_json(data_path("billing_entries.json"), rows)
-def save_projects(rows): save_json(data_path("projects.json"), rows)
-def save_users(rows): save_json(data_path("users.json"), rows)
-def save_teams(rows): save_json(data_path("teams.json"), rows)
-def save_employees(rows): save_json(data_path("employees.json"), rows)
-def save_billing_rates(rows): save_json(data_path("billing_rates.json"), rows)
-def save_cost_rates(rows): save_json(data_path("cost_rates.json"), rows)
-def save_reports(rows): save_json(data_path("reports.json"), rows)
-def save_insync_employee_orders(rows): save_json(data_path("insync_employee_orders.json"), rows)
+def get_employees():
+    return db_backend.get_employees() if USE_POSTGRES else load_json(data_path("employees.json"), [])
+
+def get_projects():
+    return db_backend.get_projects() if USE_POSTGRES else load_json(data_path("projects.json"), [])
+
+def get_billing_rates():
+    return db_backend.get_billing_rates() if USE_POSTGRES else load_json(data_path("billing_rates.json"), [])
+
+def get_cost_rates():
+    return db_backend.get_cost_rates() if USE_POSTGRES else load_json(data_path("cost_rates.json"), [])
+
+def get_staffing_entries():
+    return db_backend.get_staffing_entries() if USE_POSTGRES else load_json(data_path("staffing_entries.json"), [])
+
+def get_billing_entries():
+    return db_backend.get_billing_entries() if USE_POSTGRES else load_json(data_path("billing_entries.json"), [])
+
+def get_reports():
+    return db_backend.get_reports() if USE_POSTGRES else load_json(data_path("reports.json"), [])
+
+def get_insync_employee_orders():
+    return db_backend.get_insync_employee_orders() if USE_POSTGRES else load_json(data_path("insync_employee_orders.json"), {})
+
+def get_dropdown_options():
+    return db_backend.get_dropdown_options() if USE_POSTGRES else load_json(data_path("dropdown_options.json"), {})
+
+# Save functions
+def save_staffing_entries(rows):
+    if USE_POSTGRES:
+        db_backend.save_staffing_entries(rows)
+    else:
+        save_json(data_path("staffing_entries.json"), rows)
+
+def save_billing_entries(rows):
+    if USE_POSTGRES:
+        db_backend.save_billing_entries(rows)
+    else:
+        save_json(data_path("billing_entries.json"), rows)
+
+def save_projects(rows):
+    if USE_POSTGRES:
+        db_backend.save_projects(rows)
+    else:
+        save_json(data_path("projects.json"), rows)
+
+def save_users(rows):
+    if USE_POSTGRES:
+        db_backend.save_users(rows)
+    else:
+        save_json(data_path("users.json"), rows)
+
+def save_teams(rows):
+    if USE_POSTGRES:
+        db_backend.save_teams(rows)
+    else:
+        save_json(data_path("teams.json"), rows)
+
+def save_employees(rows):
+    if USE_POSTGRES:
+        db_backend.save_employees(rows)
+    else:
+        save_json(data_path("employees.json"), rows)
+
+def save_billing_rates(rows):
+    if USE_POSTGRES:
+        db_backend.save_billing_rates(rows)
+    else:
+        save_json(data_path("billing_rates.json"), rows)
+
+def save_cost_rates(rows):
+    if USE_POSTGRES:
+        db_backend.save_cost_rates(rows)
+    else:
+        save_json(data_path("cost_rates.json"), rows)
+
+def save_reports(rows):
+    if USE_POSTGRES:
+        db_backend.save_reports(rows)
+    else:
+        save_json(data_path("reports.json"), rows)
+
+def save_insync_employee_orders(rows):
+    if USE_POSTGRES:
+        db_backend.save_insync_employee_orders(rows)
+    else:
+        save_json(data_path("insync_employee_orders.json"), rows)
 def save_dropdown_options(rows): save_json(data_path("dropdown_options.json"), rows)
 
 FULL_PROJECT_FIELDS = [
