@@ -1,0 +1,68 @@
+[
+  {
+    "id": "BR002",
+    "region": "Global",
+    "project_type": "IP (Z5LB/J2RC)",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR003",
+    "region": "Global",
+    "project_type": "Other CD/IP Codes",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR004",
+    "region": "EMEA",
+    "project_type": "IP (Z5LB/J2RC)",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR005",
+    "region": "APAC",
+    "project_type": "IP (Z5LB/J2RC)",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR006",
+    "region": "AMER",
+    "project_type": "IP (Z5LB/J2RC)",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR007",
+    "region": "EMEA",
+    "project_type": "Other CD/IP Codes",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR008",
+    "region": "APAC",
+    "project_type": "Other CD/IP Codes",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR009",
+    "region": "AMER",
+    "project_type": "Other CD/IP Codes",
+    "per_fte_rate": "240"
+  },
+  {
+    "id": "BR010",
+    "region": "EMEA",
+    "project_type": "Client billed",
+    "per_fte_rate": "780"
+  },
+  {
+    "id": "BR012",
+    "region": "AMER",
+    "project_type": "Client billed",
+    "per_fte_rate": "840"
+  },
+  {
+    "id": "BR013",
+    "region": "APAC",
+    "project_type": "Client billed",
+    "per_fte_rate": "740"
+  }
+]

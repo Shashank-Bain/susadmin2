@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Teams | SusAdmin{% endblock %}
+{% block header_title %}Teams{% endblock %}
+{% block header_subtitle %}Manage team structure and ownership{% endblock %}
+{% block content %}
+<div class="content-grid two">
+  <div class="glass section-card">
+    <div class="section-head"><h2>Add Team</h2></div>
+    <form method="post" class="form-grid">
+      <div><label>Team Name</label><input class="glass-input" name="team_name" required></div>
+      <div><label>Team Type</label><select class="glass-input multi-select" name="team_type" multiple size="4">{% for option in dropdowns.team_type %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Classification Main</label><select class="glass-input" name="team_classification_main">{% for option in dropdowns.team_classification_main %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Classification 1</label><select class="glass-input" name="team_classification_1">{% for option in dropdowns.team_classification_1 %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Classification 2</label><select class="glass-input" name="team_classification_2">{% for option in dropdowns.team_classification_2 %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Manager</label><select class="glass-input" name="manager_id">{% for manager in managers %}<option value="{{ manager.id }}">{{ manager.first_name }} {{ manager.last_name }}</option>{% endfor %}</select></div>
+      <div><label>Approved Headcount</label><input class="glass-input" name="approved_headcount" type="number" min="0" step="0.1" placeholder="e.g. 12"></div>
+      <div><label>Approved Annual Budget</label><input class="glass-input" name="approved_annual_budget" type="number" min="0" step="0.01" placeholder="e.g. 450000"></div>
+      <div class="full"><label>Ombudsperson</label><select class="glass-input" name="ombudsperson_employee_id"><option value="">Select employee</option>{% for employee in employees %}<option value="{{ employee.id }}">{{ employee.name }}</option>{% endfor %}</select></div>
+      <div class="full actions-row"><button class="btn btn-primary" type="submit">Add Team</button></div>
+    </form>
+    <p class="helper-note">Hold Ctrl to select multiple Team Type options.</p>
+  </div>
+  <div class="glass section-card">
+    <div class="section-head"><h2>Existing Teams</h2></div>
+    <table class="data-table compact">
+      <thead><tr><th>ID</th><th>Team Name</th><th>Type</th><th>Classifications</th><th>Approved HC</th><th>Approved Annual Budget</th><th>Actions</th></tr></thead>
+      <tbody>{% for row in rows %}<tr><td>{{ row.id }}</td><td>{{ row.team_name }}</td><td>{{ (row.team_type or [])|join(', ') if row.team_type is iterable and row.team_type is not string else row.team_type }}</td><td>{{ row.team_classification_main }} / {{ row.team_classification_1 }} / {{ row.team_classification_2 }}</td><td>{{ row.approved_headcount if row.approved_headcount is not none else '' }}</td><td>{% if row.approved_annual_budget and row.approved_annual_budget|string|trim != '' %}$ {{ ("%.0f"|format(row.approved_annual_budget|float)) }}{% else %}—{% endif %}</td><td><a class="edit-link" href="{{ url_for('admin_teams_edit', item_id=row.id) }}">Edit</a> <a class="danger-link" href="{{ url_for('admin_teams_delete', item_id=row.id) }}">Delete</a></td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

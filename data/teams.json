@@ -1,0 +1,123 @@
+[
+  {
+    "id": "T001",
+    "team_name": "Global Sustainability - Carbon Shashank",
+    "team_type": [
+      "IP"
+    ],
+    "team_classification_main": "Global Sustainability",
+    "team_classification_1": "GS-Carbon",
+    "team_classification_2": "GS-Carbon",
+    "manager_id": "U003",
+    "ombudsperson_employee_id": "E004",
+    "approved_headcount": 7.0,
+    "approved_annual_budget": 403200.0
+  },
+  {
+    "id": "T002",
+    "team_name": "SustainX & Commitments Shashank",
+    "team_type": [
+      "Product",
+      "CD",
+      "IP"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-Tech",
+    "team_classification_2": "SustainX",
+    "manager_id": "U003",
+    "ombudsperson_employee_id": "E034",
+    "approved_headcount": 4.0,
+    "approved_annual_budget": 230400.0
+  },
+  {
+    "id": "T003",
+    "team_name": "Global Sustainability - Reporting Kriti",
+    "team_type": [
+      "Client",
+      "CD"
+    ],
+    "team_classification_main": "Global Sustainability",
+    "team_classification_1": "GS-Reporting",
+    "team_classification_2": "GS-Reporting",
+    "manager_id": "U004",
+    "ombudsperson_employee_id": "E011"
+  },
+  {
+    "id": "T004",
+    "team_name": "NZN/Decarb - Rajat",
+    "team_type": [
+      "Client",
+      "CD"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-Decarb",
+    "team_classification_2": "Net Zero Navigator",
+    "manager_id": "U005",
+    "ombudsperson_employee_id": "E018"
+  },
+  {
+    "id": "T005",
+    "team_name": "ESG Diagnostics - Samyak",
+    "team_type": [
+      "Product",
+      "CD"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-Tech",
+    "team_classification_2": "ESG Diagnostics",
+    "manager_id": "U006",
+    "ombudsperson_employee_id": "E025"
+  },
+  {
+    "id": "T006",
+    "team_name": "Sustainability Policy - Samyak",
+    "team_type": [
+      "CD",
+      "IP"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-PPK",
+    "team_classification_2": "Policy team",
+    "manager_id": "U006",
+    "ombudsperson_employee_id": "E025"
+  },
+  {
+    "id": "T007",
+    "team_name": "Sustainability New Frontiers - Subodhika",
+    "team_type": [
+      "CD",
+      "IP"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-Flex 2",
+    "team_classification_2": "New Frontiers",
+    "manager_id": "U007",
+    "ombudsperson_employee_id": "E036"
+  },
+  {
+    "id": "T008",
+    "team_name": "Sustainability Carbon & ESG Diagnostics - Subodhika",
+    "team_type": [
+      "Client",
+      "CD"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-CC Carbon",
+    "team_classification_2": "Carbon Commercial",
+    "manager_id": "U007",
+    "ombudsperson_employee_id": "E036"
+  },
+  {
+    "id": "T009",
+    "team_name": "Sustainability Social Impact - Subodhika",
+    "team_type": [
+      "Client",
+      "CD"
+    ],
+    "team_classification_main": "S&R",
+    "team_classification_1": "S&R-Social Impact",
+    "team_classification_2": "Social Impact",
+    "manager_id": "U007",
+    "ombudsperson_employee_id": "E036"
+  }
+]

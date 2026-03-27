@@ -1,0 +1,107 @@
+[
+  {
+    "id": "CR001",
+    "designation": "Analyst 1",
+    "per_fte_rate": 220
+  },
+  {
+    "id": "CR002",
+    "designation": "Analyst 2",
+    "per_fte_rate": 250
+  },
+  {
+    "id": "CR003",
+    "designation": "Associate 1",
+    "per_fte_rate": 350
+  },
+  {
+    "id": "CR004",
+    "designation": "Associate 2",
+    "per_fte_rate": 400
+  },
+  {
+    "id": "CR005",
+    "designation": "Associate 3",
+    "per_fte_rate": 400
+  },
+  {
+    "id": "CR006",
+    "designation": "Project Leader 1",
+    "per_fte_rate": 550
+  },
+  {
+    "id": "CR007",
+    "designation": "Project Leader 2",
+    "per_fte_rate": 550
+  },
+  {
+    "id": "CR008",
+    "designation": "Project Leader 3",
+    "per_fte_rate": 550
+  },
+  {
+    "id": "CR009",
+    "designation": "Manager 1",
+    "per_fte_rate": 800
+  },
+  {
+    "id": "CR010",
+    "designation": "Manager 2",
+    "per_fte_rate": 800
+  },
+  {
+    "id": "CR011",
+    "designation": "Manager 3",
+    "per_fte_rate": 800
+  },
+  {
+    "id": "CR012",
+    "designation": "Senior Manager 1",
+    "per_fte_rate": 1000
+  },
+  {
+    "id": "CR013",
+    "designation": "Senior Manager 2",
+    "per_fte_rate": 1000
+  },
+  {
+    "id": "CR014",
+    "designation": "Senior Manager 3",
+    "per_fte_rate": 1000
+  },
+  {
+    "id": "CR015",
+    "designation": "Director 1",
+    "per_fte_rate": 1600
+  },
+  {
+    "id": "CR016",
+    "designation": "Director 2",
+    "per_fte_rate": 1600
+  },
+  {
+    "id": "CR017",
+    "designation": "Director 3",
+    "per_fte_rate": 1600
+  },
+  {
+    "id": "CR018",
+    "designation": "Senior Director 1",
+    "per_fte_rate": 2300
+  },
+  {
+    "id": "CR019",
+    "designation": "Senior Director 2",
+    "per_fte_rate": 2300
+  },
+  {
+    "id": "CR020",
+    "designation": "Senior Director 3",
+    "per_fte_rate": 2300
+  },
+  {
+    "id": "CR021",
+    "designation": "VP",
+    "per_fte_rate": 2600
+  }
+]

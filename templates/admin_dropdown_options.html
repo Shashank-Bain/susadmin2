@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Dropdown Options | SusAdmin{% endblock %}
+{% block header_title %}Dropdown Options{% endblock %}
+{% block header_subtitle %}Admin-editable values for forms across the application{% endblock %}
+{% block content %}
+<div class="content-grid two">
+  <div class="glass section-card">
+    <div class="section-head"><h2>Add Option</h2></div>
+    <form method="post" class="form-grid">
+      <div><label>Option Group</label><select class="glass-input" name="key">{% for key in options.keys()|list|sort %}<option value="{{ key }}">{{ key }}</option>{% endfor %}</select></div>
+      <div><label>Value</label><input class="glass-input" name="value" required></div>
+      <div class="full actions-row"><button class="btn btn-primary" type="submit">Add Option</button></div>
+    </form>
+  </div>
+  <div class="glass section-card">
+    <div class="section-head"><h2>Existing Option Groups</h2></div>
+    {% for key, values in options.items() %}
+      <div class="option-group">
+        <h3>{{ key }}</h3>
+        <div class="chip-row">
+          {% for value in values %}
+            <form method="post" action="{{ url_for('admin_dropdown_options_delete') }}" class="inline-form">
+              <input type="hidden" name="key" value="{{ key }}">
+              <input type="hidden" name="value" value="{{ value }}">
+              <button class="soft-chip removable-chip" type="submit">{{ value }} ×</button>
+            </form>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

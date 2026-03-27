@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}My Projects | SusAdmin{% endblock %}
+{% block header_title %}My Projects{% endblock %}
+{% block header_subtitle %}Projects created by you{% endblock %}
+
+{% block content %}
+<div class="glass section-card">
+  <div class="section-head row-between">
+    <div><h2>My Projects</h2></div>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="openModal('project-modal')">New Project</button>
+      <a class="btn btn-secondary" href="{{ url_for('manager_home') }}">Back</a>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Project Name</th>
+          <th>Project Type</th>
+          <th>Billing Case Code</th>
+          <th>Client Name</th>
+          <th>Requestor</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in rows %}
+        <tr>
+          <td>{{ item.project_name }}</td>
+          <td>{{ item.project_type }}</td>
+          <td>{{ item.billing_case_code }}</td>
+          <td>{{ item.client_name }}</td>
+          <td>{{ item.requestor }}</td>
+          <td>
+            <a class="edit-link" href="{{ url_for('manager_projects_edit', item_id=item.id) }}">Edit</a>
+            <a class="danger-link" href="{{ url_for('manager_projects_delete', item_id=item.id) }}" onclick="return confirm('Delete this project?')">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not rows %}
+        <tr>
+          <td colspan="6">No projects created by you yet.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="modal-backdrop" id="project-modal">
+  <div class="modal-card large glass">
+    <div class="modal-head">
+      <div><h3>New Project</h3></div>
+      <button class="icon-btn" onclick="closeModal('project-modal')">×</button>
+    </div>
+
+    <form id="project-form" class="form-grid" onsubmit="submitProjectForm(event)">
+      <div><label>Project Name</label><input class="glass-input" name="project_name" required></div>
+
+      <div>
+        <label>Project Type</label>
+        <select class="glass-input" name="project_type">
+          {% for option in dropdowns.project_type %}
+          <option value="{{ option }}">{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Type for Util</label>
+        <select class="glass-input" name="type_for_util">
+          {% for option in dropdowns.type_for_util %}
+          <option value="{{ option }}">{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div><label>Billing Case Code</label><input class="glass-input" name="billing_case_code"></div>
+      <div><label>Client Case Code</label><input class="glass-input" name="client_case_code"></div>
+
+      <div>
+        <label>Product</label>
+        <select class="glass-input" name="product">
+          {% for option in dropdowns.product %}
+          <option value="{{ option }}">{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div><label>Requestor</label><input class="glass-input" name="requestor"></div>
+      <div><label>NPS Contact</label><input class="glass-input" name="nps_contact"></div>
+      <div><label>Case Status</label><input class="glass-input" name="case_status"></div>
+      <div><label>NPS Status</label><input class="glass-input" name="nps_status"></div>
+
+      <div>
+        <label>Case Manager for NPS</label>
+        <select class="glass-input" name="case_manager_for_nps">
+          <option value="">Select manager</option>
+          {% for u in users if u.role == 'MANAGER' %}
+          {% set uname = u.first_name ~ ' ' ~ u.last_name %}
+          <option value="{{ uname }}">{{ uname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div><label>BCN Case Execution Location</label><input class="glass-input" name="bcn_case_execution_location"></div>
+      <div><label>Billed to end client</label><input class="glass-input" name="billed_to_end_client"></div>
+      <div><label>Case Type</label><input class="glass-input" name="case_type"></div>
+      <div><label>Office</label><input class="glass-input" name="office"></div>
+      <div><label>Region</label><select class="glass-input" name="region">{% for option in dropdowns.billing_region %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Case Manager / Principal</label><input class="glass-input" name="case_manager_principal"></div>
+      <div><label>Client Name</label><input class="glass-input" name="client_name"></div>
+      <div><label>Case Partner</label><input class="glass-input" name="case_partner"></div>
+      <div><label>Industry</label><input class="glass-input" name="industry"></div>
+      <div><label>Capability</label><input class="glass-input" name="capability"></div>
+      <div><label>Master Project Name</label><input class="glass-input" name="master_project_name"></div>
+      <div><label>Date of Request</label><input class="glass-input" type="date" name="date_of_request"></div>
+      <div><label>Case Delivery Primary Location</label><input class="glass-input" name="case_delivery_primary_location"></div>
+      <div><label>Outside BCN Location</label><input class="glass-input" name="outside_bcn_location"></div>
+      <div><label>Case POC</label><input class="glass-input" name="case_poc"></div>
+      <div><label>End Client POC</label><input class="glass-input" name="end_client_poc"></div>
+
+      <div class="full">
+        <label>Work Description</label>
+        <textarea class="glass-input textarea-input" name="work_description"></textarea>
+      </div>
+
+      <div class="full">
+        <label>Team</label>
+        <select class="glass-input" name="team_id">
+          {% for team in teams %}
+          <option value="{{ team.id }}">{{ team.team_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="full actions-row">
+        <button class="btn btn-secondary" type="button" onclick="closeModal('project-modal')">Cancel</button>
+        <button class="btn btn-primary" type="submit">Create Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+async function submitProjectForm(event) {
+  event.preventDefault();
+
+  const form = document.getElementById("project-form");
+  const formData = new FormData(form);
+
+  const res = await fetch("/api/projects/create", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+
+  if (data.ok) {
+    closeModal("project-modal");
+    window.location.reload();
+  } else {
+    alert("Failed to create project");
+  }
+}
+</script>
+{% endblock %}
