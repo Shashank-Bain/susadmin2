@@ -108,6 +108,7 @@
       <div><label>Billed to end client</label><input class="glass-input" name="billed_to_end_client"></div>
       <div><label>Case Type</label><input class="glass-input" name="case_type"></div>
       <div><label>Office</label><input class="glass-input" name="office"></div>
+      <div><label>Region</label><select class="glass-input" name="region">{% for option in dropdowns.billing_region %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
       <div><label>Case Manager / Principal</label><input class="glass-input" name="case_manager_principal"></div>
       <div><label>Client Name</label><input class="glass-input" name="client_name"></div>
       <div><label>Case Partner</label><input class="glass-input" name="case_partner"></div>

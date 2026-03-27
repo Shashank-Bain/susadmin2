@@ -15,6 +15,7 @@
       <div><label>Product</label><select class="glass-input" name="product">{% for option in dropdowns.product %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
       <div><label>Requestor</label><input class="glass-input" name="requestor"></div>
       <div><label>NPS Contact</label><input class="glass-input" name="nps_contact"></div>
+      <div><label>Region</label><select class="glass-input" name="region">{% for option in dropdowns.billing_region %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></div>
       <div><label>Case Manager for NPS</label><select class="glass-input" name="case_manager_for_nps"><option value="">Select user</option>{% for user in users %}<option value="{{ user.first_name }} {{ user.last_name }}">{{ user.first_name }} {{ user.last_name }}</option>{% endfor %}</select></div>
       <div class="full"><label>Work Description</label><textarea class="glass-input textarea-input" name="work_description"></textarea></div>
       <div class="full"><label>Team</label><select class="glass-input" name="team_id">{% for team in teams %}<option value="{{ team.id }}">{{ team.team_name }}</option>{% endfor %}</select></div>

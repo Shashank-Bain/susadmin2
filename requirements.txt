@@ -1,3 +1,5 @@
 flask
-requests
 openpyxl
+openai
+python-dotenv
+pandas

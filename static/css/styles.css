@@ -142,6 +142,12 @@ textarea {
   color: var(--text);
 }
 
+.btn-success {
+  background: linear-gradient(145deg, #4caf50, #45a049);
+  color: white;
+  font-weight: 600;
+}
+
 .btn:hover,
 .icon-btn:hover {
   transform: translateY(-1px);
@@ -161,6 +167,8 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .brand {
@@ -289,6 +297,10 @@ textarea {
   flex: 1;
   display: grid;
   gap: 18px;
+  align-content: start;
+  align-items: start;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .flash-stack {
@@ -364,6 +376,8 @@ textarea {
 .section-card {
   padding: 20px;
   border-radius: 24px;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .section-head {
@@ -674,7 +688,8 @@ textarea {
 }
 
 .table-scroll {
-  overflow: auto;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .table-input {
@@ -748,16 +763,36 @@ a.tab {
 
 .director-filter-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 14px;
   align-items: end;
   flex-wrap: wrap;
+}
+
+.director-filter-row .filter-group {
+  flex: 0 0 240px;
 }
 
 .filter-group {
   display: grid;
   gap: 6px;
   min-width: 220px;
+}
+
+.director-gantt-filters {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.director-gantt-filters .filter-group {
+  flex: 1 1 calc(25% - 11px);
+  min-width: 180px;
+}
+
+.director-gantt-filters .actions-row {
+  margin-left: auto;
 }
 
 .metric-pill-row {
@@ -832,6 +867,10 @@ a.tab {
   flex-direction: column;
   gap: 12px;
   overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+  max-width: 100%;
+  z-index: 1;
 }
 
 .gantt-header,
@@ -865,10 +904,17 @@ a.tab {
 }
 
 .gantt-dates,
-.gantt-track {
+.gantt-track,
+.gantt-track-container {
   display: grid;
   gap: 6px;
   min-width: max-content;
+}
+
+.gantt-track-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .gantt-date-head {
@@ -890,14 +936,20 @@ a.tab {
   margin-top: 2px;
 }
 
-.gantt-track {
+.gantt-track,
+.gantt-bar-track {
+  display: grid;
+  gap: 6px;
+  min-width: max-content;
   position: relative;
-  min-height: 52px;
+  min-height: 36px;
   align-items: center;
-  padding: 6px 0;
+  padding: 4px 0;
+  overflow: visible;
 }
 
-.gantt-track::before {
+.gantt-track::before,
+.gantt-bar-track::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -908,7 +960,9 @@ a.tab {
 }
 
 .gantt-track > .gantt-bar-segment,
-.gantt-track > .gantt-empty {
+.gantt-track > .gantt-empty,
+.gantt-bar-track > .gantt-bar-segment,
+.gantt-bar-track > .gantt-empty {
   position: relative;
   z-index: 1;
 }
@@ -916,16 +970,140 @@ a.tab {
 .gantt-bar-segment {
   align-self: center;
   justify-self: stretch;
-  padding: 10px 12px;
-  border-radius: 999px;
-  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 600;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.gantt-segment-label {
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.gantt-tooltip-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  min-width: 280px;
+  max-width: 360px;
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(145deg, rgba(16, 21, 33, 0.98), rgba(30, 37, 53, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 20000;
+}
+
+.gantt-tooltip-card::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border-width: 7px;
+  border-style: solid;
+  border-color: rgba(30, 37, 53, 0.98) transparent transparent transparent;
+}
+
+.gantt-bar-segment:hover .gantt-tooltip-card {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.global-gantt-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  min-width: 280px;
+  max-width: 360px;
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(145deg, #eef1f4, #e2e7ed);
+  border: 1px solid #cfd6df;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color: #101317;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+  z-index: 50000;
+}
+
+.global-gantt-tooltip.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.tooltip-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #0f1720;
+}
+
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tooltip-item {
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #d3dae2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tooltip-item span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  opacity: 1;
+  color: #2a323b;
+}
+
+.tooltip-item strong {
+  font-size: 12px;
+  line-height: 1.25;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip-item-wide {
+  grid-column: 1 / -1;
+}
+
+/* Different colors for parallel project bars */
+.gantt-bar-level-0 .gantt-bar-segment {
   background: linear-gradient(90deg, rgba(78, 161, 255, 0.9), rgba(111, 214, 255, 0.9));
-  color: #fff;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.gantt-bar-level-1 .gantt-bar-segment {
+  background: linear-gradient(90deg, rgba(102, 204, 153, 0.9), rgba(51, 204, 153, 0.9));
+}
+
+.gantt-bar-level-2 .gantt-bar-segment {
+  background: linear-gradient(90deg, rgba(255, 153, 102, 0.9), rgba(255, 102, 102, 0.9));
+}
+
+.gantt-bar-level-3 .gantt-bar-segment {
+  background: linear-gradient(90deg, rgba(153, 102, 255, 0.9), rgba(153, 153, 255, 0.9));
 }
 
 .gantt-empty {
@@ -933,6 +1111,52 @@ a.tab {
   text-align: center;
   opacity: 0.45;
   padding: 10px 0;
+}
+
+.director-gantt-board {
+  overflow: visible;
+}
+
+.director-gantt-board .gantt-header,
+.director-gantt-board .gantt-line {
+  min-width: 0;
+  width: 100%;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.director-gantt-board .gantt-dates,
+.director-gantt-board .gantt-track-container,
+.director-gantt-board .gantt-bar-track {
+  min-width: 0;
+  width: 100%;
+}
+
+.director-gantt-board .gantt-date-head {
+  min-width: 0;
+  padding: 6px 2px;
+}
+
+.director-gantt-board .gantt-date {
+  font-size: 10px;
+}
+
+.director-gantt-board .gantt-day {
+  font-size: 10px;
+}
+
+.overview-coverage-table {
+  table-layout: fixed;
+}
+
+.overview-coverage-table th,
+.overview-coverage-table td {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.overview-coverage-table th:nth-child(5),
+.overview-coverage-table td:nth-child(5) {
+  width: 32%;
 }
 
 /* Report Modal Styles */
@@ -1064,6 +1288,11 @@ a.tab {
     grid-template-columns: 1fr;
   }
 
+  .row-between {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1071,6 +1300,34 @@ a.tab {
   .toolbar-row,
   .director-filter-row {
     align-items: stretch;
+  }
+
+  .director-filter-row .filter-group {
+    flex: 1 1 calc(50% - 7px);
+    min-width: 0;
+  }
+
+  .director-gantt-filters .filter-group {
+    flex: 1 1 calc(50% - 7px);
+    min-width: 0;
+  }
+
+  .director-gantt-filters .actions-row {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .header-actions,
+  .section-actions,
+  .actions-row {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .inline-toolbar {
+    width: 100%;
   }
 
   .topbar {
@@ -1096,8 +1353,60 @@ a.tab {
 }
 
 @media (max-width: 640px) {
+  .app-shell {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .section-card,
+  .modal-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
   .kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .director-filter-row .filter-group,
+  .director-gantt-filters .filter-group {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .director-gantt-filters .actions-row {
+    width: 100%;
+  }
+
+  .inline-toolbar {
+    gap: 8px;
+  }
+
+  .inline-toolbar .small-select,
+  .inline-toolbar .period-pill {
+    width: 100%;
+  }
+
+  .button-row .btn,
+  .actions-row .btn,
+  .actions-row a.btn {
+    width: 100%;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 9px 8px;
+    font-size: 12px;
+  }
+
+  .director-gantt-board .gantt-header,
+  .director-gantt-board .gantt-line {
+    grid-template-columns: 130px minmax(0, 1fr);
+  }
+
+  .director-gantt-board .gantt-bar-segment {
+    font-size: 10px;
+    padding: 4px 6px;
   }
 
   .topbar-user-menu {

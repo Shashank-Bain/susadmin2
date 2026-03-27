@@ -4,33 +4,141 @@
 {% block header_subtitle %}Executive control tower for CoE performance, recovery, and staffing health{% endblock %}
 {% block content %}
 <div class="glass section-card director-toolbar">
-  <form method="get" class="director-filter-row">
+  <form method="get" class="director-filter-row" id="director-main-filter-form">
     <div class="filter-group">
-      <label>Reporting Month</label>
-      <select name="month" class="glass-input">
-        {% for month in months %}
-        <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}</option>
+      <label>View Period</label>
+      <select name="period_scope" class="glass-input" onchange="submitFormById('director-main-filter-form')">
+        <option value="weekly" {% if period_scope == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if period_scope == 'monthly' %}selected{% endif %}>Monthly</option>
+        <option value="ytd" {% if period_scope == 'ytd' %}selected{% endif %}>YTD</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Reporting Timeline</label>
+      <select name="timeline" class="glass-input" onchange="submitFormById('director-main-filter-form')">
+        {% for opt in timeline_options %}
+        <option value="{{ opt.value }}" {% if opt.value == selected_timeline %}selected{% endif %}>{{ opt.label }}</option>
         {% endfor %}
       </select>
     </div>
     <input type="hidden" name="view" value="{{ active_view }}">
+    <input type="hidden" name="tracker_summary" value="{{ tracker_summary }}">
+  </form>
+</div>
+
+{% if active_view == 'project_gantt' %}
+<div class="glass section-card">
+  <div class="section-head"><h2>Project Gantt Chart</h2></div>
+  <form method="get" class="director-gantt-filters" id="director-gantt-filter-form">
+    <input type="hidden" name="view" value="project_gantt">
+    <input type="hidden" name="view_type" value="{{ view_type }}">
+    <input type="hidden" name="anchor" value="{{ gantt_data.current_anchor if gantt_data else '' }}">
+    <input type="hidden" name="period_scope" value="{{ period_scope }}">
+    <input type="hidden" name="timeline" value="{{ selected_timeline }}">
+    <input type="hidden" name="tracker_summary" value="{{ tracker_summary }}">
+    <div class="filter-group">
+      <label>Manager</label>
+      <select name="manager" class="glass-input" onchange="submitFormById('director-gantt-filter-form')">
+        {% for opt in manager_options %}
+        <option value="{{ opt.value }}" {% if opt.value == manager_filter %}selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Team Classification Main</label>
+      <select name="team_class_main" class="glass-input" onchange="submitFormById('director-gantt-filter-form')">
+        {% for opt in team_class_main_options %}
+        <option value="{{ opt }}" {% if opt == team_class_main_filter %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Team Classification 1</label>
+      <select name="team_class_1" class="glass-input" onchange="submitFormById('director-gantt-filter-form')">
+        {% for opt in team_class_1_options %}
+        <option value="{{ opt }}" {% if opt == team_class_1_filter %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Team Classification 2</label>
+      <select name="team_class_2" class="glass-input" onchange="submitFormById('director-gantt-filter-form')">
+        {% for opt in team_class_2_options %}
+        <option value="{{ opt }}" {% if opt == team_class_2_filter %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <div class="actions-row">
-      <button type="submit" class="btn btn-primary">Apply</button>
+      <a class="btn btn-secondary" href="{{ url_for('director_home', view='project_gantt', period_scope=period_scope, timeline=selected_timeline, tracker_summary=tracker_summary, view_type=view_type, anchor=(gantt_data.current_anchor if gantt_data else ''), manager='All', team_class_main='All', team_class_1='All', team_class_2='All') }}">Reset Filters</a>
     </div>
   </form>
+</div>
 
-  <div class="tab-strip top-spaced">
-    <a class="tab {% if active_view == 'scorecard' %}active{% endif %}" href="{{ url_for('director_home', month=selected_month, view='scorecard') }}">CoE Scorecard</a>
-    <a class="tab {% if active_view == 'billing' %}active{% endif %}" href="{{ url_for('director_home', month=selected_month, view='billing') }}">Billing Summary</a>
-    <a class="tab {% if active_view == 'martha' %}active{% endif %}" href="{{ url_for('director_home', month=selected_month, view='martha') }}">Martha Monthly Summary</a>
-    <a class="tab {% if active_view == 'tracker' %}active{% endif %}" href="{{ url_for('director_home', month=selected_month, view='tracker') }}">Case Billing Tracker</a>
+<div class="glass section-card">
+  <div class="section-head row-between">
+    <div><h2>Gantt Chart</h2></div>
+    <div class="inline-toolbar">
+      <select class="glass-input small-select" onchange="changeDirectorGanttView(this.value)">
+        <option value="weekly" {% if view_type == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if view_type == 'monthly' %}selected{% endif %}>Monthly</option>
+      </select>
+      <button class="icon-btn" type="button" onclick="moveDirectorGanttPeriod('{{ gantt_data.prev_anchor }}')">&lt;</button>
+      <div class="period-pill">{{ gantt_data.period_label }}</div>
+      <button class="icon-btn" type="button" onclick="moveDirectorGanttPeriod('{{ gantt_data.next_anchor }}')">&gt;</button>
+    </div>
+  </div>
+
+  <div class="gantt-board director-gantt-board">
+    <div class="gantt-header">
+      <div class="gantt-side-head">Team / Project</div>
+      <div class="gantt-dates" style="grid-template-columns: repeat({{ gantt_data.visible_dates|length }}, minmax(0, 1fr));">
+        {% for idx in range(gantt_data.visible_dates|length) %}
+        <div class="gantt-date-head">
+          <div class="gantt-date">{{ gantt_data.week_date_labels[idx] }}</div>
+          <div class="gantt-day">{{ gantt_data.week_day_labels[idx] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% for row in gantt_data.gantt_rows %}
+    <div class="gantt-line">
+      <div class="gantt-side-label">
+        <div class="gantt-team">{{ row.team_name }}</div>
+        <div class="gantt-project">{% if row.is_empty %}No staffing entered{% else %}{{ row.bars|length }} project(s){% endif %}</div>
+      </div>
+
+      <div class="gantt-track-container" style="grid-template-columns: repeat({{ gantt_data.visible_dates|length }}, minmax(0, 1fr));">
+        {% if row.is_empty %}
+        <div class="gantt-empty">—</div>
+        {% else %}
+          {% for bar in row.bars %}
+          <div class="gantt-bar-track gantt-bar-level-{{ bar.level }}" style="grid-template-columns: repeat({{ gantt_data.visible_dates|length }}, minmax(0, 1fr));">
+            {% for segment in bar.segments %}
+            <div class="gantt-bar-segment gantt-segment-tooltip" style="{{ segment.style }}"
+                 data-tip-project="{{ bar.tooltip.project_name|e }}"
+                 data-tip-dailyfte="{{ bar.tooltip.daily_ftes }}"
+                 data-tip-days="{{ bar.tooltip.total_days }}"
+                 data-tip-region="{{ bar.tooltip.region|e }}"
+                 data-tip-requestor="{{ bar.tooltip.requestor|e }}"
+                 data-tip-billing="{{ bar.tooltip.total_billing|e }}">
+              <span class="gantt-segment-label">{{ segment.label }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
 </div>
+{% endif %}
 
 {% if active_view == 'scorecard' %}
 <div class="kpi-grid">
-  <div class="kpi-card glass"><div class="kpi-label">Total FTEs</div><div class="kpi-value">{{ metrics.scorecard.total_ftes }}</div><div class="kpi-foot">vs prior month {{ metrics.scorecard.fte_trend }}</div></div>
-  <div class="kpi-card glass"><div class="kpi-label">Total Billing</div><div class="kpi-value">{{ metrics.scorecard.total_billing }}</div><div class="kpi-foot">vs prior month {{ metrics.scorecard.billing_trend }}</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">Total FTEs</div><div class="kpi-value">{{ metrics.scorecard.total_ftes }}</div><div class="kpi-foot">{{ period_trend_label }} {{ metrics.scorecard.fte_trend }}</div></div>
+  <div class="kpi-card glass"><div class="kpi-label">Total Billing</div><div class="kpi-value">{{ metrics.scorecard.total_billing }}</div><div class="kpi-foot">{{ period_trend_label }} {{ metrics.scorecard.billing_trend }}</div></div>
   <div class="kpi-card glass"><div class="kpi-label">Recovery %</div><div class="kpi-value">{{ metrics.scorecard.recovery }}</div><div class="kpi-foot">target {{ metrics.scorecard.recovery_target }}</div></div>
   <div class="kpi-card glass"><div class="kpi-label">Gender Ratio</div><div class="kpi-value">{{ metrics.scorecard.gender_ratio }}</div><div class="kpi-foot">female share {{ metrics.scorecard.female_share }}</div></div>
   <div class="kpi-card glass"><div class="kpi-label">Overall NPS</div><div class="kpi-value">{{ metrics.scorecard.nps }}</div><div class="kpi-foot">ytd trend {{ metrics.scorecard.nps_trend }}</div></div>
@@ -85,151 +193,236 @@
 {% endif %}
 
 {% if active_view == 'billing' %}
-<div class="content-grid two">
-  <div class="glass section-card">
-    <div class="section-head"><h2>Global Sustainability</h2></div>
-    <div class="metric-pill-row">
-      <div class="metric-pill"><span>Approved headcount</span><strong>{{ metrics.billing_summary.global_sustainability.approved_headcount }}</strong></div>
-      <div class="metric-pill"><span>Approved annual budget</span><strong>{{ metrics.billing_summary.global_sustainability.approved_annual_budget }}</strong></div>
-    </div>
-    <table class="data-table compact top-spaced">
-      <thead><tr><th>Month</th><th>GS headcount</th><th>Billing</th></tr></thead>
-      <tbody>
-        {% for row in metrics.billing_summary.global_sustainability.rows %}
-        <tr><td>{{ row.month }}</td><td>{{ row.gs_headcount }}</td><td>{{ row.billing }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="glass section-card">
+  <div class="section-head"><h2>Global Sustainability</h2></div>
+  <div class="metric-pill-row">
+    <div class="metric-pill"><span>Approved headcount</span><strong>{{ metrics.billing_summary.global_sustainability.approved_headcount }}</strong></div>
+    <div class="metric-pill"><span>Approved annual budget</span><strong>{{ metrics.billing_summary.global_sustainability.approved_annual_budget }}</strong></div>
   </div>
-
-  <div class="glass section-card">
-    <div class="section-head"><h2>S&amp;R</h2></div>
-    <div class="metric-pill-row">
-      <div class="metric-pill"><span>Approved headcount</span><strong>{{ metrics.billing_summary.sr.approved_headcount }}</strong></div>
-      <div class="metric-pill"><span>Approved annual budget</span><strong>{{ metrics.billing_summary.sr.approved_annual_budget }}</strong></div>
-    </div>
-    <div class="table-scroll top-spaced">
-      <table class="data-table compact">
-        <thead>
-          <tr>
-            <th>Month</th><th>S&amp;R headcount</th><th>Monthly budget</th><th>Working days</th><th>FTEs by budget</th>
-            <th>Excess FTEs</th><th>Cost excess</th><th>Gross cost</th><th>Min recovery</th><th>Retainer</th>
-            <th>Total recovery</th><th>Client work</th><th>Internal</th><th>Recovery %</th><th>Client recovery %</th>
-            <th>Other recovery %</th><th>Net cost to practice</th><th>Budget overrun / under-use</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in metrics.billing_summary.sr.rows %}
-          <tr>
-            <td>{{ row.month }}</td>
-            <td>{{ row.headcount }}</td>
-            <td>{{ row.monthly_budget }}</td>
-            <td>{{ row.working_days }}</td>
-            <td>{{ row.ftes_based_on_budget }}</td>
-            <td>{{ row.excess_ftes }}</td>
-            <td>{{ row.cost_of_excess_ftes }}</td>
-            <td>{{ row.gross_cost }}</td>
-            <td>{{ row.minimum_recovery_needed }}</td>
-            <td>{{ row.retainer }}</td>
-            <td>{{ row.total_recovery }}</td>
-            <td>{{ row.client_work }}</td>
-            <td>{{ row.internal_other }}</td>
-            <td>{{ row.recovery_pct }}</td>
-            <td>{{ row.client_recovery_pct }}</td>
-            <td>{{ row.other_recovery_pct }}</td>
-            <td>{{ row.net_cost_to_practice }}</td>
-            <td>{{ row.budget_variance }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <table class="data-table compact top-spaced">
+    <thead><tr><th>Month</th><th>GS headcount</th><th>Billing</th></tr></thead>
+    <tbody>
+      {% for row in metrics.billing_summary.global_sustainability.rows %}
+      <tr><td>{{ row.month }}</td><td>{{ row.gs_headcount }}</td><td>{{ row.billing }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-{% endif %}
 
-{% if active_view == 'martha' %}
-<div class="content-grid two">
-  <div class="glass section-card">
-    <div class="section-head"><h2>Martha Monthly Summary</h2></div>
+<div class="glass section-card">
+  <div class="section-head"><h2>S&amp;R</h2></div>
+  <div class="metric-pill-row">
+    <div class="metric-pill"><span>Approved headcount</span><strong>{{ metrics.billing_summary.sr.approved_headcount }}</strong></div>
+    <div class="metric-pill"><span>Approved annual budget</span><strong>{{ metrics.billing_summary.sr.approved_annual_budget }}</strong></div>
+  </div>
+  <div class="table-scroll top-spaced">
     <table class="data-table compact">
       <thead>
-        <tr><th>Month</th><th>#FTEs</th><th>Gross cost</th><th>Recovery from billed work</th><th>Net cost to practice</th><th>Total recovery %</th><th>% client codes</th><th>% practice IP codes</th></tr>
+        <tr>
+          <th>Month</th><th>S&amp;R headcount</th><th>Monthly budget</th><th>Working days</th><th>FTEs by budget</th>
+          <th>Excess FTEs</th><th>Cost excess</th><th>Gross cost</th><th>Min recovery</th><th>Retainer</th>
+          <th>Total recovery</th><th>Client work</th><th>Internal</th><th>Recovery %</th><th>Client recovery %</th>
+          <th>Other recovery %</th><th>Net cost to practice</th><th>Budget overrun / under-use</th>
+        </tr>
       </thead>
       <tbody>
-        {% for row in metrics.martha_summary.rows %}
+        {% for row in metrics.billing_summary.sr.rows %}
         <tr>
           <td>{{ row.month }}</td>
-          <td>{{ row.ftes }}</td>
+          <td>{{ row.headcount }}</td>
+          <td>{{ row.monthly_budget }}</td>
+          <td>{{ row.working_days }}</td>
+          <td>{{ row.ftes_based_on_budget }}</td>
+          <td>{{ row.excess_ftes }}</td>
+          <td>{{ row.cost_of_excess_ftes }}</td>
           <td>{{ row.gross_cost }}</td>
-          <td>{{ row.recovery_billed_work }}</td>
+          <td>{{ row.minimum_recovery_needed }}</td>
+          <td>{{ row.retainer }}</td>
+          <td>{{ row.total_recovery }}</td>
+          <td>{{ row.client_work }}</td>
+          <td>{{ row.internal_other }}</td>
+          <td>{{ row.recovery_pct }}</td>
+          <td>{{ row.client_recovery_pct }}</td>
+          <td>{{ row.other_recovery_pct }}</td>
           <td>{{ row.net_cost_to_practice }}</td>
-          <td>{{ row.total_recovery_pct }}</td>
-          <td>{{ row.client_codes_pct }}</td>
-          <td>{{ row.other_practice_ip_pct }}</td>
+          <td>{{ row.budget_variance }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  <div class="glass section-card">
-    <div class="section-head"><h2>Leadership Commentary</h2></div>
-    <div class="narrative-block">
-      <h4>Key Wins</h4>
-      <ul class="clean-list">
-        {% for item in metrics.martha_summary.key_wins %}
-        <li>{{ item }}</li>
-        {% endfor %}
-      </ul>
-      <h4>Key Challenges</h4>
-      <ul class="clean-list">
-        {% for item in metrics.martha_summary.key_challenges %}
-        <li>{{ item }}</li>
-        {% endfor %}
-      </ul>
-      <h4>Recommended Actions</h4>
-      <ul class="clean-list">
-        {% for item in metrics.martha_summary.action_items %}
-        <li>{{ item }}</li>
-        {% endfor %}
-      </ul>
-    </div>
+</div>
+{% endif %}
+
+{% if active_view == 'martha' %}
+<div class="glass section-card">
+  <div class="section-head"><h2>Martha Monthly Summary</h2></div>
+  <table class="data-table compact">
+    <thead>
+      <tr><th>Month</th><th>#FTEs</th><th>Gross cost</th><th>Recovery from billed work</th><th>Net cost to practice</th><th>Total recovery %</th><th>% client codes</th><th>% practice IP codes</th></tr>
+    </thead>
+    <tbody>
+      {% for row in metrics.martha_summary.rows %}
+      <tr>
+        <td>{{ row.month }}</td>
+        <td>{{ row.ftes }}</td>
+        <td>{{ row.gross_cost }}</td>
+        <td>{{ row.recovery_billed_work }}</td>
+        <td>{{ row.net_cost_to_practice }}</td>
+        <td>{{ row.total_recovery_pct }}</td>
+        <td>{{ row.client_codes_pct }}</td>
+        <td>{{ row.other_practice_ip_pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="glass section-card">
+  <div class="section-head"><h2>Leadership Commentary</h2></div>
+  <div class="narrative-block">
+    <h4>Key Wins</h4>
+    <ul class="clean-list">
+      {% for item in metrics.martha_summary.key_wins %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+    <h4>Key Challenges</h4>
+    <ul class="clean-list">
+      {% for item in metrics.martha_summary.key_challenges %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+    <h4>Recommended Actions</h4>
+    <ul class="clean-list">
+      {% for item in metrics.martha_summary.action_items %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
   </div>
 </div>
 {% endif %}
 
 {% if active_view == 'tracker' %}
 <div class="glass section-card">
-  <div class="section-head"><h2>Case Billing Tracker</h2></div>
+  <div class="section-head row-between">
+    <h2>Case Billing Tracker</h2>
+    <form method="get" id="tracker-summary-form" class="inline-toolbar">
+      <input type="hidden" name="view" value="tracker">
+      <input type="hidden" name="period_scope" value="{{ period_scope }}">
+      <input type="hidden" name="timeline" value="{{ selected_timeline }}">
+      <label for="tracker-summary" style="font-size:12px; opacity:0.8;">Summarize By</label>
+      <select id="tracker-summary" name="tracker_summary" class="glass-input small-select" onchange="submitFormById('tracker-summary-form')">
+        <option value="auto" {% if tracker_summary == 'auto' %}selected{% endif %}>Auto</option>
+        <option value="project" {% if tracker_summary == 'project' %}selected{% endif %}>Project</option>
+        <option value="week" {% if tracker_summary == 'week' %}selected{% endif %}>Week</option>
+        <option value="month" {% if tracker_summary == 'month' %}selected{% endif %}>Month</option>
+        <option value="year" {% if tracker_summary == 'year' %}selected{% endif %}>Year</option>
+        <option value="type_of_project" {% if tracker_summary == 'type_of_project' %}selected{% endif %}>Type of Project</option>
+        <option value="team_classification_main" {% if tracker_summary == 'team_classification_main' %}selected{% endif %}>Team Classification Main</option>
+        <option value="team_classification_1" {% if tracker_summary == 'team_classification_1' %}selected{% endif %}>Team Classification 1</option>
+        <option value="team_classification_2" {% if tracker_summary == 'team_classification_2' %}selected{% endif %}>Team Classification 2</option>
+        <option value="region" {% if tracker_summary == 'region' %}selected{% endif %}>Region</option>
+      </select>
+    </form>
+  </div>
   <div class="table-scroll">
     <table class="data-table compact">
       <thead>
         <tr>
-          <th>Month</th><th>Type of project</th><th>For Util</th><th>Team Classification 1</th><th>Team Classification 2</th>
-          <th>Project Name</th><th>Case Code</th><th>Stakeholder</th><th>Region</th><th>Duration (days)</th>
-          <th>Billed amount</th><th>BCN manager</th>
+          <th>Month</th>
+          <th {% if tracker_summary not in ['type_of_project', 'auto'] %}style="display:none;"{% endif %}>Type of project</th>
+          <th {% if tracker_summary not in ['auto'] %}style="display:none;"{% endif %}>For Util</th>
+          <th {% if tracker_summary not in ['team_classification_main', 'auto'] %}style="display:none;"{% endif %}>Team Classification Main</th>
+          <th {% if tracker_summary not in ['team_classification_1', 'auto'] %}style="display:none;"{% endif %}>Team Classification 1</th>
+          <th {% if tracker_summary not in ['team_classification_2', 'auto'] %}style="display:none;"{% endif %}>Team Classification 2</th>
+          <th {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>Project Name</th>
+          <th {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>Case Code</th>
+          <th {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>Stakeholder</th>
+          <th {% if tracker_summary not in ['region', 'auto'] %}style="display:none;"{% endif %}>Region</th>
+          <th>Duration (days)</th>
+          <th>Billed amount</th>
+          <th {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>BCN manager</th>
         </tr>
       </thead>
       <tbody>
         {% for row in metrics.case_billing_tracker.rows %}
         <tr>
           <td>{{ row.month }}</td>
-          <td>{{ row.project_type }}</td>
-          <td>{{ row.for_util }}</td>
-          <td>{{ row.team_classification_1 }}</td>
-          <td>{{ row.team_classification_2 }}</td>
-          <td>{{ row.project_name }}</td>
-          <td>{{ row.case_code }}</td>
-          <td>{{ row.stakeholder }}</td>
-          <td>{{ row.region }}</td>
+          <td {% if tracker_summary not in ['type_of_project', 'auto'] %}style="display:none;"{% endif %}>{{ row.project_type }}</td>
+          <td {% if tracker_summary not in ['auto'] %}style="display:none;"{% endif %}>{{ row.for_util }}</td>
+          <td {% if tracker_summary not in ['team_classification_main', 'auto'] %}style="display:none;"{% endif %}>{{ row.team_classification_main }}</td>
+          <td {% if tracker_summary not in ['team_classification_1', 'auto'] %}style="display:none;"{% endif %}>{{ row.team_classification_1 }}</td>
+          <td {% if tracker_summary not in ['team_classification_2', 'auto'] %}style="display:none;"{% endif %}>{{ row.team_classification_2 }}</td>
+          <td {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>{{ row.project_name }}</td>
+          <td {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>{{ row.case_code }}</td>
+          <td {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>{{ row.stakeholder }}</td>
+          <td {% if tracker_summary not in ['region', 'auto'] %}style="display:none;"{% endif %}>{{ row.region }}</td>
           <td>{{ row.duration_days }}</td>
           <td>{{ row.billed_amount }}</td>
-          <td>{{ row.bcn_manager }}</td>
+          <td {% if tracker_summary not in ['project', 'auto'] %}style="display:none;"{% endif %}>{{ row.bcn_manager }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% elif active_view == 'chat' %}
+<div class="glass section-card">
+  <div class="section-head">
+    <h2>Chat Assistant</h2>
+    <p style="font-size: 14px; opacity: 0.8; margin-top: 8px;">Ask questions about projects, billing, staffing, teams, and other data. Example: "Create a table showing billing for March summarized by manager"</p>
+  </div>
+  <div id="chat-container" style="display: flex; flex-direction: column; height: calc(100vh - 450px); min-height: 400px; max-height: 600px;">
+    <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 20px;">
+      <div class="chat-message assistant-message" style="margin-bottom: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-radius: 8px;">
+        <div style="font-weight: 600; margin-bottom: 4px; color: #6495ff;">Assistant</div>
+        <div>Hello! I'm here to help you analyze organizational data including projects, billing, staffing, teams, and performance metrics. What would you like to know?</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <input type="text" id="chat-input" class="glass-input" placeholder="Type your question here..." style="flex: 1;" onkeypress="if(event.key==='Enter') sendChatMessage()">
+      <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+    </div>
+    <div id="chat-loading" style="display: none; margin-top: 8px; color: #6495ff;">Thinking...</div>
+  </div>
+</div>
 {% endif %}
+<script>
+function submitFormById(formId) {
+  const form = document.getElementById(formId);
+  if (form) {
+    form.submit();
+  }
+}
+
+function changeDirectorGanttView(view) {
+  const params = new URLSearchParams(window.location.search);
+  params.set("view_type", view);
+  if (!params.get("period_scope")) {
+    params.set("period_scope", "{{ period_scope }}");
+  }
+  if (!params.get("timeline")) {
+    params.set("timeline", "{{ selected_timeline }}");
+  }
+  if (!params.get("tracker_summary")) {
+    params.set("tracker_summary", "{{ tracker_summary }}");
+  }
+  window.location.href = "{{ url_for('director_home', view='project_gantt') }}?" + params.toString();
+}
+
+function moveDirectorGanttPeriod(anchor) {
+  const params = new URLSearchParams(window.location.search);
+  params.set("anchor", anchor);
+  if (!params.get("period_scope")) {
+    params.set("period_scope", "{{ period_scope }}");
+  }
+  if (!params.get("timeline")) {
+    params.set("timeline", "{{ selected_timeline }}");
+  }
+  if (!params.get("tracker_summary")) {
+    params.set("tracker_summary", "{{ tracker_summary }}");
+  }
+  window.location.href = "{{ url_for('director_home', view='project_gantt') }}?" + params.toString();
+}
+</script>
 {% endblock %}
