@@ -3,3 +3,4 @@ openpyxl
 openai
 python-dotenv
 pandas
+requests
