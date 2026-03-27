@@ -8,36 +8,9 @@ import warnings
 # Suppress SSL warnings
 warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
-# Check if we should use Vercel Blob storage
-USE_BLOB = os.getenv("JSON_DB_BACKEND") == "vercel_blob"
-
-if USE_BLOB:
-    print(f"[BLOB] Blob backend ENABLED")
-    print(f"[BLOB] Checking environment variables...")
-    BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
-    BLOB_BASE_URL = os.getenv("VERCEL_BLOB_BASE_URL", "").strip('"')
-    print(f"[BLOB] BLOB_TOKEN: {'SET (' + BLOB_TOKEN[:20] + '...)' if BLOB_TOKEN else 'NOT SET'}")
-    print(f"[BLOB] BLOB_BASE_URL: {BLOB_BASE_URL if BLOB_BASE_URL else 'NOT SET'}")
-    if not BLOB_TOKEN or not BLOB_BASE_URL:
-        print(f"[BLOB] WARNING: Missing blob credentials! Will return empty data.")
-else:
-    print(f"[BLOB] Blob backend DISABLED - using local files")
-    print(f"[BLOB] JSON_DB_BACKEND = {os.getenv('JSON_DB_BACKEND', 'not set')}")
-
-if USE_BLOB:
-    try:
-        from vercel.blob import put, get, list as blob_list
-    except ImportError:
-        try:
-            import vercel_blob
-            put = vercel_blob.put
-            get = vercel_blob.get
-        except ImportError:
-            # Try requests-based approach
-            import requests
-            BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
-            USE_BLOB = False  # Fall back to requests implementation
-            print("Warning: vercel-blob not properly installed, using requests fallback")
+def _use_blob() -> bool:
+    """Check at runtime if we should use blob storage"""
+    return os.getenv("JSON_DB_BACKEND") == "vercel_blob"
 
 
 def ensure_parent_dir(path: str) -> None:
@@ -55,16 +28,18 @@ def _blob_key_from_path(path: str) -> str:
 
 def load_json(path: str, default: Any):
     """Load JSON from either local file or Vercel Blob based on JSON_DB_BACKEND"""
-    if USE_BLOB:
+    if _use_blob():
         try:
             import requests
             BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
             BLOB_BASE_URL = os.getenv("VERCEL_BLOB_BASE_URL", "").strip('"')
             
+            print(f"[BLOB] Backend enabled for {path}")
+            print(f"[BLOB] BLOB_TOKEN: {'SET' if BLOB_TOKEN else 'NOT SET'}")
+            print(f"[BLOB] BLOB_BASE_URL: {'SET' if BLOB_BASE_URL else 'NOT SET'}")
+            
             if not BLOB_TOKEN or not BLOB_BASE_URL:
                 print(f"[BLOB] ERROR: Missing credentials for {path}")
-                print(f"[BLOB] BLOB_TOKEN present: {bool(BLOB_TOKEN)}")
-                print(f"[BLOB] BLOB_BASE_URL present: {bool(BLOB_BASE_URL)}")
                 return default
             
             blob_key = _blob_key_from_path(path)
@@ -92,7 +67,8 @@ def load_json(path: str, default: Any):
             return default
     else:
         # Local file storage
-        print(f"[LOCAL] Loading from local file: {path}")
+        print(f"[LOCAL] Backend enabled - Loading from local file: {path}")
+        print(f"[LOCAL] JSON_DB_BACKEND = '{os.getenv('JSON_DB_BACKEND', 'not set')}'")
         if not os.path.exists(path):
             print(f"[LOCAL] File not found: {path}")
             return default
@@ -108,12 +84,14 @@ def load_json(path: str, default: Any):
 
 def save_json(path: str, data: Any) -> None:
     """Save JSON to either local file or Vercel Blob based on JSON_DB_BACKEND"""
-    if USE_BLOB:
+    if _use_blob():
         try:
             import requests
             BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
             blob_key = _blob_key_from_path(path)
             json_str = json.dumps(data, indent=2)
+            
+            print(f"[BLOB] Saving to blob: {blob_key}")
             
             # Upload to Vercel Blob API endpoint
             headers = {
@@ -131,16 +109,17 @@ def save_json(path: str, data: Any) -> None:
             )
             
             if response.status_code == 200:
-                print(f"Saved to blob: {blob_key}")
+                print(f"[BLOB] Saved successfully: {blob_key}")
             else:
-                print(f"Blob save failed ({response.status_code}): {blob_key}")
-                print(f"Response: {response.text[:200]}")
+                print(f"[BLOB] Save failed ({response.status_code}): {blob_key}")
+                print(f"[BLOB] Response: {response.text[:200]}")
                 raise Exception(f"Failed to save to blob: {response.status_code}")
         except Exception as e:
-            print(f"Error saving to blob {path}: {e}")
+            print(f"[BLOB] Error saving to blob {path}: {e}")
             raise
     else:
         # Local file storage
+        print(f"[LOCAL] Saving to local file: {path}")
         ensure_parent_dir(path)
         if os.path.exists(path):
             backup_dir = os.path.join(os.path.dirname(path), "_backups")
