@@ -12,6 +12,19 @@ warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 USE_BLOB = os.getenv("JSON_DB_BACKEND") == "vercel_blob"
 
 if USE_BLOB:
+    print(f"[BLOB] Blob backend ENABLED")
+    print(f"[BLOB] Checking environment variables...")
+    BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
+    BLOB_BASE_URL = os.getenv("VERCEL_BLOB_BASE_URL", "").strip('"')
+    print(f"[BLOB] BLOB_TOKEN: {'SET (' + BLOB_TOKEN[:20] + '...)' if BLOB_TOKEN else 'NOT SET'}")
+    print(f"[BLOB] BLOB_BASE_URL: {BLOB_BASE_URL if BLOB_BASE_URL else 'NOT SET'}")
+    if not BLOB_TOKEN or not BLOB_BASE_URL:
+        print(f"[BLOB] WARNING: Missing blob credentials! Will return empty data.")
+else:
+    print(f"[BLOB] Blob backend DISABLED - using local files")
+    print(f"[BLOB] JSON_DB_BACKEND = {os.getenv('JSON_DB_BACKEND', 'not set')}")
+
+if USE_BLOB:
     try:
         from vercel.blob import put, get, list as blob_list
     except ImportError:
@@ -47,6 +60,13 @@ def load_json(path: str, default: Any):
             import requests
             BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
             BLOB_BASE_URL = os.getenv("VERCEL_BLOB_BASE_URL", "").strip('"')
+            
+            if not BLOB_TOKEN or not BLOB_BASE_URL:
+                print(f"[BLOB] ERROR: Missing credentials for {path}")
+                print(f"[BLOB] BLOB_TOKEN present: {bool(BLOB_TOKEN)}")
+                print(f"[BLOB] BLOB_BASE_URL present: {bool(BLOB_BASE_URL)}")
+                return default
+            
             blob_key = _blob_key_from_path(path)
             
             # Use private store base URL
@@ -55,9 +75,11 @@ def load_json(path: str, default: Any):
             headers = {"Authorization": f"Bearer {BLOB_TOKEN}"}
             response = requests.get(url, headers=headers, timeout=10, verify=False)
             
+            print(f"[BLOB] Response status: {response.status_code}")
+            
             if response.status_code == 200:
                 data = response.json()
-                print(f"[BLOB] Successfully loaded {blob_key} ({len(str(data))} bytes)")
+                print(f"[BLOB] Successfully loaded {blob_key} - {len(data) if isinstance(data, list) else 'dict'} items")
                 return data
             else:
                 print(f"[BLOB] Fetch failed ({response.status_code}): {blob_key}")
@@ -70,12 +92,17 @@ def load_json(path: str, default: Any):
             return default
     else:
         # Local file storage
+        print(f"[LOCAL] Loading from local file: {path}")
         if not os.path.exists(path):
+            print(f"[LOCAL] File not found: {path}")
             return default
         with open(path, "r", encoding="utf-8") as f:
             try:
-                return json.load(f)
-            except json.JSONDecodeError:
+                data = json.load(f)
+                print(f"[LOCAL] Loaded {len(data) if isinstance(data, list) else 'dict'} items from {path}")
+                return data
+            except json.JSONDecodeError as e:
+                print(f"[LOCAL] JSON decode error in {path}: {e}")
                 return default
 
 
