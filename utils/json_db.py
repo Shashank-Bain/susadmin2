@@ -51,16 +51,22 @@ def load_json(path: str, default: Any):
             
             # Use private store base URL
             url = f"{BLOB_BASE_URL}/{blob_key}"
+            print(f"[BLOB] Fetching: {url}")
             headers = {"Authorization": f"Bearer {BLOB_TOKEN}"}
             response = requests.get(url, headers=headers, timeout=10, verify=False)
             
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                print(f"[BLOB] Successfully loaded {blob_key} ({len(str(data))} bytes)")
+                return data
             else:
-                print(f"Blob fetch failed ({response.status_code}): {blob_key}")
+                print(f"[BLOB] Fetch failed ({response.status_code}): {blob_key}")
+                print(f"[BLOB] Response: {response.text[:200]}")
                 return default
         except Exception as e:
-            print(f"Error loading from blob {path}: {e}")
+            print(f"[BLOB] Error loading from blob {path}: {e}")
+            import traceback
+            print(f"[BLOB] Traceback: {traceback.format_exc()}")
             return default
     else:
         # Local file storage

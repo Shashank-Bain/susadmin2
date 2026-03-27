@@ -11,14 +11,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "change-this-in-production"
+app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
+
+# Log configuration info
+app.logger.info("="*60)
+app.logger.info("SUSADMIN2 STARTING")
+app.logger.info(f"JSON_DB_BACKEND: {os.getenv('JSON_DB_BACKEND', 'not set (will use local)')}")
+app.logger.info(f"BLOB_READ_WRITE_TOKEN: {'SET' if os.getenv('BLOB_READ_WRITE_TOKEN') else 'NOT SET'}")
+app.logger.info(f"VERCEL_BLOB_BASE_URL: {os.getenv('VERCEL_BLOB_BASE_URL', 'not set')}")
+app.logger.info(f"SECRET_KEY: {'SET' if os.getenv('SECRET_KEY') else 'using default (insecure!)'}")
+app.logger.info("="*60)
 
 DATA_DIR = "data"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def data_path(name): return f"{DATA_DIR}/{name}"
-def get_users(): return load_json(data_path("users.json"), [])
+
+def get_users():
+    users = load_json(data_path("users.json"), [])
+    app.logger.info(f"[DATA] Loaded {len(users)} users from {data_path('users.json')}")
+    return users
+
 def get_teams(): return load_json(data_path("teams.json"), [])
 def get_employees(): return load_json(data_path("employees.json"), [])
 def get_projects(): return load_json(data_path("projects.json"), [])
@@ -72,9 +86,14 @@ def next_id(prefix, rows):
     return f"{prefix}{max_num + 1:03d}"
 
 def find_user_by_email(email):
-    for user in get_users():
+    users = get_users()
+    app.logger.info(f"[LOGIN] Looking up user: {email}")
+    app.logger.info(f"[LOGIN] Total users in database: {len(users)}")
+    for user in users:
         if user.get("email", "").lower() == email.lower():
+            app.logger.info(f"[LOGIN] User found: {email} (ID: {user.get('id')}, Role: {user.get('role')})")
             return user
+    app.logger.warning(f"[LOGIN] User not found: {email}")
     return None
 
 def login_required(fn):
@@ -191,10 +210,35 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
-        user = find_user_by_email(email)
-        if user and user.get("password") == password:
-            session["user"] = {"id": user["id"], "email": user["email"], "first_name": user["first_name"], "last_name": user["last_name"], "role": user["role"]}
-            return redirect(url_for("route_by_role"))
+        app.logger.info(f"[LOGIN] Login attempt for email: {email}")
+        
+        try:
+            user = find_user_by_email(email)
+            if user:
+                app.logger.info(f"[LOGIN] User record found. Checking password...")
+                stored_password = user.get("password")
+                app.logger.info(f"[LOGIN] Password match: {stored_password == password}")
+                
+                if stored_password == password:
+                    session["user"] = {
+                        "id": user["id"], 
+                        "email": user["email"], 
+                        "first_name": user["first_name"], 
+                        "last_name": user["last_name"], 
+                        "role": user["role"]
+                    }
+                    app.logger.info(f"[LOGIN] Session created for user: {email}")
+                    app.logger.info(f"[LOGIN] Redirecting to role-based route...")
+                    return redirect(url_for("route_by_role"))
+                else:
+                    app.logger.warning(f"[LOGIN] Password mismatch for user: {email}")
+            else:
+                app.logger.warning(f"[LOGIN] User not found in database: {email}")
+        except Exception as e:
+            app.logger.error(f"[LOGIN] Error during login: {str(e)}")
+            import traceback
+            app.logger.error(f"[LOGIN] Traceback: {traceback.format_exc()}")
+        
         flash("Invalid email or password.", "error")
     return render_template("login.html")
 
