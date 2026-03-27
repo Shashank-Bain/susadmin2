@@ -1,0 +1,12 @@
+{
+  "name": "susadmin2",
+  "version": "1.0.0",
+  "description": "Admin management system with Flask backend",
+  "scripts": {
+    "start": "python app.py",
+    "dev": "python app.py"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
