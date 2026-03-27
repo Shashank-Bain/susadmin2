@@ -88,34 +88,38 @@ def save_json(path: str, data: Any) -> None:
         try:
             import requests
             BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip('"')
-            BLOB_BASE_URL = os.getenv("VERCEL_BLOB_BASE_URL", "").strip('"')
             blob_key = _blob_key_from_path(path)
             json_str = json.dumps(data, indent=2)
             
             print(f"[BLOB] Saving to blob: {blob_key}")
             
-            # Try uploading directly to the private store URL (same as reading)
-            url = f"{BLOB_BASE_URL}/{blob_key}"
+            # Use Vercel Blob API with pathname in URL path (not query param)
+            # https://blob.vercel-storage.com/data/staffing_entries.json
+            url = f"https://blob.vercel-storage.com/{blob_key}"
+            
             headers = {
                 "Authorization": f"Bearer {BLOB_TOKEN}",
-                "Content-Type": "application/json",
+                "x-api-version": "7",  # Vercel API version
             }
+            
+            print(f"[BLOB] Upload URL: {url}")
+            
             response = requests.put(
                 url,
                 headers=headers,
                 data=json_str.encode('utf-8'),
                 timeout=30,
-                verify=False  # Disable SSL verification for Windows
+                verify=False
             )
             
             print(f"[BLOB] Save response status: {response.status_code}")
+            print(f"[BLOB] Save response: {response.text[:300]}")
             
             if response.status_code in [200, 201]:
                 print(f"[BLOB] Saved successfully: {blob_key}")
             else:
                 print(f"[BLOB] Save failed ({response.status_code}): {blob_key}")
-                print(f"[BLOB] Response: {response.text[:200]}")
-                raise Exception(f"Failed to save to blob: {response.status_code}")
+                raise Exception(f"Failed to save to blob: {response.status_code} - {response.text[:200]}")
         except Exception as e:
             print(f"[BLOB] Error saving to blob {path}: {e}")
             raise
