@@ -12,6 +12,10 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True  # Required for HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # Log configuration info
 app.logger.info("="*60)
@@ -220,6 +224,7 @@ def login():
                 app.logger.info(f"[LOGIN] Password match: {stored_password == password}")
                 
                 if stored_password == password:
+                    session.permanent = True  # Make session persist
                     session["user"] = {
                         "id": user["id"], 
                         "email": user["email"], 
