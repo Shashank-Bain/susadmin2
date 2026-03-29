@@ -11,6 +11,17 @@
 </div>
 
 <div class="glass section-card">
+  <div class="section-head" style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Data Backup</h2>
+    <a href="{{ url_for('admin_backup_download') }}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;padding:10px 20px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download Backup (ZIP)
+    </a>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-top:8px">Downloads all JSON data files as a ZIP archive for safekeeping.</p>
+</div>
+
+<div class="glass section-card">
   <div class="section-head"><h2>Admin Modules</h2></div>
   <div class="chip-row">
     <span class="soft-chip">Users</span>

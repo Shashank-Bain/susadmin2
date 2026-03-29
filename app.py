@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, session, url_for, f
 from functools import wraps
 from datetime import datetime, timedelta
 from io import StringIO, BytesIO
-import csv, os, json
+import csv, os, json, zipfile
 from utils.json_db import load_json, save_json
 import openai
 from dotenv import load_dotenv
@@ -234,6 +234,20 @@ def profile():
 def admin_home():
     stats = {"users": len(get_users()), "teams": len(get_teams()), "employees": len(get_employees()), "projects": len(get_projects())}
     return render_template("admin_home.html", stats=stats)
+
+@app.route("/admin/backup-download")
+@login_required
+@roles_required("ADMIN")
+def admin_backup_download():
+    mem_zip = BytesIO()
+    with zipfile.ZipFile(mem_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for filename in sorted(os.listdir(DATA_DIR)):
+            if filename.endswith('.json'):
+                filepath = os.path.join(DATA_DIR, filename)
+                zf.write(filepath, filename)
+    mem_zip.seek(0)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return send_file(mem_zip, mimetype='application/zip', as_attachment=True, download_name=f"bcn_backup_{timestamp}.zip")
 
 @app.route("/admin/master-sheet")
 @login_required
