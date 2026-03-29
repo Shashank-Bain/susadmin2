@@ -1704,8 +1704,18 @@ def director_home():
             active_view = cleaned
             break
 
-    period_scope = request.args.get("period_scope", "monthly").strip().lower()
-    tracker_summary = request.args.get("tracker_summary", "auto").strip().lower()
+    if "period_scope" in request.args:
+        period_scope = request.args.get("period_scope", "monthly").strip().lower()
+        session["director_period_scope"] = period_scope
+    else:
+        period_scope = session.get("director_period_scope", "monthly")
+
+    if "tracker_summary" in request.args:
+        tracker_summary = request.args.get("tracker_summary", "auto").strip().lower()
+        session["director_tracker_summary"] = tracker_summary
+    else:
+        tracker_summary = session.get("director_tracker_summary", "auto")
+
     if tracker_summary not in ["auto", "project", "week", "month", "year", "type_of_project", "team_classification_main", "team_classification_1", "team_classification_2", "region"]:
         tracker_summary = "auto"
 
@@ -1714,14 +1724,19 @@ def director_home():
 
     timeline_options = get_director_timeline_options(period_scope)
     timeline_values = {o["value"] for o in timeline_options}
-    selected_timeline = request.args.get("timeline", "").strip()
 
-    # Backward compatibility for older month parameter links
-    if not selected_timeline and period_scope == "monthly":
+    if "timeline" in request.args:
+        selected_timeline = request.args.get("timeline", "").strip()
+        session["director_timeline"] = selected_timeline
+    elif "month" in request.args and period_scope == "monthly":
         selected_timeline = request.args.get("month", "").strip()
+        session["director_timeline"] = selected_timeline
+    else:
+        selected_timeline = session.get("director_timeline", "")
 
     if (not selected_timeline) or (selected_timeline not in timeline_values):
         selected_timeline = timeline_options[-1]["value"] if timeline_options else ""
+        session["director_timeline"] = selected_timeline
     
     metrics = None
     gantt_data = None
