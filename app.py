@@ -3258,11 +3258,12 @@ Write ONLY Python code. No explanations, no markdown fences:"""
         processed_data = None
         exec_error_msg = None
 
+        exec_namespace = dict(safe_globals)
+
         for attempt in range(2):
-            safe_locals = {}
             try:
-                exec(generated_code, safe_globals, safe_locals)
-                processed_data = safe_locals.get("result", [])
+                exec(generated_code, exec_namespace)
+                processed_data = exec_namespace.get("result", [])
                 break
             except Exception as code_error:
                 app.logger.error(f"Code execution error (attempt {attempt+1}): {str(code_error)}")
@@ -3291,6 +3292,7 @@ Write ONLY fixed Python code:"""
                             generated_code = generated_code.split("```python")[1].split("```")[0].strip()
                         elif generated_code.startswith("```"):
                             generated_code = generated_code.split("```")[1].split("```")[0].strip()
+                        exec_namespace = dict(safe_globals)
                     except Exception:
                         exec_error_msg = str(code_error)
                         break
