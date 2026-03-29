@@ -70,18 +70,15 @@ textarea {
 }
 
 .brand-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  background: linear-gradient(145deg, var(--red), #e05a5a);
-  box-shadow: 0 6px 18px rgba(179, 27, 27, 0.25);
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
+  background: url('../images/logo.svg') no-repeat center / contain;
 }
 
 .brand-mark.large {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
 }
 
 .login-form {
