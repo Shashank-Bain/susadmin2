@@ -10,134 +10,36 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Import Postgres DB if backend is postgres
-USE_POSTGRES = os.getenv("JSON_DB_BACKEND") == "postgres"
-if USE_POSTGRES:
-    from utils import postgres_db as db_backend
-else:
-    # Will use json_db functions below
-    db_backend = None
-
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = True  # Required for HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
-
-# Log configuration info
-app.logger.info("="*60)
-app.logger.info("SUSADMIN2 STARTING")
-app.logger.info(f"JSON_DB_BACKEND: {os.getenv('JSON_DB_BACKEND', 'not set (will use local)')}")
-app.logger.info(f"BLOB_READ_WRITE_TOKEN: {'SET' if os.getenv('BLOB_READ_WRITE_TOKEN') else 'NOT SET'}")
-app.logger.info(f"VERCEL_BLOB_BASE_URL: {os.getenv('VERCEL_BLOB_BASE_URL', 'not set')}")
-app.logger.info(f"SECRET_KEY: {'SET' if os.getenv('SECRET_KEY') else 'using default (insecure!)'}")
-app.logger.info("="*60)
+app.secret_key = "change-this-in-production"
 
 DATA_DIR = "data"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def data_path(name): return f"{DATA_DIR}/{name}"
+def get_users(): return load_json(data_path("users.json"), [])
+def get_teams(): return load_json(data_path("teams.json"), [])
+def get_employees(): return load_json(data_path("employees.json"), [])
+def get_projects(): return load_json(data_path("projects.json"), [])
+def get_billing_rates(): return load_json(data_path("billing_rates.json"), [])
+def get_cost_rates(): return load_json(data_path("cost_rates.json"), [])
+def get_staffing_entries(): return load_json(data_path("staffing_entries.json"), [])
+def get_billing_entries(): return load_json(data_path("billing_entries.json"), [])
+def get_reports(): return load_json(data_path("reports.json"), [])
+def get_insync_employee_orders(): return load_json(data_path("insync_employee_orders.json"), {})
+def get_dropdown_options(): return load_json(data_path("dropdown_options.json"), {})
 
-# Database access functions - switch between Postgres and JSON based on backend
-def get_users():
-    if USE_POSTGRES:
-        return db_backend.get_users()
-    users = load_json(data_path("users.json"), [])
-    app.logger.info(f"[DATA] Loaded {len(users)} users from {data_path('users.json')}")
-    return users
-
-def get_teams():
-    return db_backend.get_teams() if USE_POSTGRES else load_json(data_path("teams.json"), [])
-
-def get_employees():
-    return db_backend.get_employees() if USE_POSTGRES else load_json(data_path("employees.json"), [])
-
-def get_projects():
-    return db_backend.get_projects() if USE_POSTGRES else load_json(data_path("projects.json"), [])
-
-def get_billing_rates():
-    return db_backend.get_billing_rates() if USE_POSTGRES else load_json(data_path("billing_rates.json"), [])
-
-def get_cost_rates():
-    return db_backend.get_cost_rates() if USE_POSTGRES else load_json(data_path("cost_rates.json"), [])
-
-def get_staffing_entries():
-    return db_backend.get_staffing_entries() if USE_POSTGRES else load_json(data_path("staffing_entries.json"), [])
-
-def get_billing_entries():
-    return db_backend.get_billing_entries() if USE_POSTGRES else load_json(data_path("billing_entries.json"), [])
-
-def get_reports():
-    return db_backend.get_reports() if USE_POSTGRES else load_json(data_path("reports.json"), [])
-
-def get_insync_employee_orders():
-    return db_backend.get_insync_employee_orders() if USE_POSTGRES else load_json(data_path("insync_employee_orders.json"), {})
-
-def get_dropdown_options():
-    return db_backend.get_dropdown_options() if USE_POSTGRES else load_json(data_path("dropdown_options.json"), {})
-
-# Save functions
-def save_staffing_entries(rows):
-    if USE_POSTGRES:
-        db_backend.save_staffing_entries(rows)
-    else:
-        save_json(data_path("staffing_entries.json"), rows)
-
-def save_billing_entries(rows):
-    if USE_POSTGRES:
-        db_backend.save_billing_entries(rows)
-    else:
-        save_json(data_path("billing_entries.json"), rows)
-
-def save_projects(rows):
-    if USE_POSTGRES:
-        db_backend.save_projects(rows)
-    else:
-        save_json(data_path("projects.json"), rows)
-
-def save_users(rows):
-    if USE_POSTGRES:
-        db_backend.save_users(rows)
-    else:
-        save_json(data_path("users.json"), rows)
-
-def save_teams(rows):
-    if USE_POSTGRES:
-        db_backend.save_teams(rows)
-    else:
-        save_json(data_path("teams.json"), rows)
-
-def save_employees(rows):
-    if USE_POSTGRES:
-        db_backend.save_employees(rows)
-    else:
-        save_json(data_path("employees.json"), rows)
-
-def save_billing_rates(rows):
-    if USE_POSTGRES:
-        db_backend.save_billing_rates(rows)
-    else:
-        save_json(data_path("billing_rates.json"), rows)
-
-def save_cost_rates(rows):
-    if USE_POSTGRES:
-        db_backend.save_cost_rates(rows)
-    else:
-        save_json(data_path("cost_rates.json"), rows)
-
-def save_reports(rows):
-    if USE_POSTGRES:
-        db_backend.save_reports(rows)
-    else:
-        save_json(data_path("reports.json"), rows)
-
-def save_insync_employee_orders(rows):
-    if USE_POSTGRES:
-        db_backend.save_insync_employee_orders(rows)
-    else:
-        save_json(data_path("insync_employee_orders.json"), rows)
+def save_staffing_entries(rows): save_json(data_path("staffing_entries.json"), rows)
+def save_billing_entries(rows): save_json(data_path("billing_entries.json"), rows)
+def save_projects(rows): save_json(data_path("projects.json"), rows)
+def save_users(rows): save_json(data_path("users.json"), rows)
+def save_teams(rows): save_json(data_path("teams.json"), rows)
+def save_employees(rows): save_json(data_path("employees.json"), rows)
+def save_billing_rates(rows): save_json(data_path("billing_rates.json"), rows)
+def save_cost_rates(rows): save_json(data_path("cost_rates.json"), rows)
+def save_reports(rows): save_json(data_path("reports.json"), rows)
+def save_insync_employee_orders(rows): save_json(data_path("insync_employee_orders.json"), rows)
 def save_dropdown_options(rows): save_json(data_path("dropdown_options.json"), rows)
 
 FULL_PROJECT_FIELDS = [
@@ -170,14 +72,9 @@ def next_id(prefix, rows):
     return f"{prefix}{max_num + 1:03d}"
 
 def find_user_by_email(email):
-    users = get_users()
-    app.logger.info(f"[LOGIN] Looking up user: {email}")
-    app.logger.info(f"[LOGIN] Total users in database: {len(users)}")
-    for user in users:
+    for user in get_users():
         if user.get("email", "").lower() == email.lower():
-            app.logger.info(f"[LOGIN] User found: {email} (ID: {user.get('id')}, Role: {user.get('role')})")
             return user
-    app.logger.warning(f"[LOGIN] User not found: {email}")
     return None
 
 def login_required(fn):
@@ -294,36 +191,10 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
-        app.logger.info(f"[LOGIN] Login attempt for email: {email}")
-        
-        try:
-            user = find_user_by_email(email)
-            if user:
-                app.logger.info(f"[LOGIN] User record found. Checking password...")
-                stored_password = user.get("password")
-                app.logger.info(f"[LOGIN] Password match: {stored_password == password}")
-                
-                if stored_password == password:
-                    session.permanent = True  # Make session persist
-                    session["user"] = {
-                        "id": user["id"], 
-                        "email": user["email"], 
-                        "first_name": user["first_name"], 
-                        "last_name": user["last_name"], 
-                        "role": user["role"]
-                    }
-                    app.logger.info(f"[LOGIN] Session created for user: {email}")
-                    app.logger.info(f"[LOGIN] Redirecting to role-based route...")
-                    return redirect(url_for("route_by_role"))
-                else:
-                    app.logger.warning(f"[LOGIN] Password mismatch for user: {email}")
-            else:
-                app.logger.warning(f"[LOGIN] User not found in database: {email}")
-        except Exception as e:
-            app.logger.error(f"[LOGIN] Error during login: {str(e)}")
-            import traceback
-            app.logger.error(f"[LOGIN] Traceback: {traceback.format_exc()}")
-        
+        user = find_user_by_email(email)
+        if user and user.get("password") == password:
+            session["user"] = {"id": user["id"], "email": user["email"], "first_name": user["first_name"], "last_name": user["last_name"], "role": user["role"]}
+            return redirect(url_for("route_by_role"))
         flash("Invalid email or password.", "error")
     return render_template("login.html")
 
@@ -3304,17 +3175,15 @@ Data Access Examples:
 - Filter by month: [b for b in billing_entries if b.get('date','').startswith('2026-03')]
 - Sum billing amounts: sum(float(b.get('billing_amount', 0)) for b in filtered_data)
 
-CRITICAL Requirements:
-1. ALWAYS use .get() method for dictionary access (e.g., b.get('key') or b.get('key', default_value))
-2. NEVER use direct bracket access (e.g., b['key']) as it can cause KeyError
-3. Store the final result in a variable called 'result'
-4. 'result' should be a list of dictionaries (table rows) or a dictionary with summary data
-5. Use pandas if needed: import pandas as pd
-6. Handle date parsing carefully: dates are strings in format 'YYYY-MM-DD'
-7. Include helpful column names in the result
-8. When filtering by case code, use b.get('case_code') field from billing_entries
-9. For monthly filters like "March", filter dates that start with the year-month (e.g., '2026-03')
-10. Provide safe default values when using .get() to avoid NoneType errors
+Requirements:
+1. Write clean Python code that processes the data according to the plan
+2. Store the final result in a variable called 'result'
+3. 'result' should be a list of dictionaries (table rows) or a dictionary with summary data
+4. Use pandas if needed: import pandas as pd
+5. Handle date parsing carefully: dates are strings in format 'YYYY-MM-DD'
+6. Include helpful column names in the result
+7. When filtering by case code, use b.get('case_code') field from billing_entries
+8. For monthly filters like "March", filter dates that start with the year-month (e.g., '2026-03')
 
 Example output format for tables:
 result = [
@@ -3337,9 +3206,6 @@ Write ONLY the Python code, no explanations:"""
             generated_code = generated_code.split("```python")[1].split("```")[0].strip()
         elif generated_code.startswith("```"):
             generated_code = generated_code.split("```")[1].split("```")[0].strip()
-        
-        # Log generated code for debugging
-        app.logger.info(f"Generated code:\n{generated_code}")
         
         # Execute the generated code safely
         progress_steps.append({"agent": "Agent 2", "status": "Processing data..."})
@@ -3375,15 +3241,8 @@ Write ONLY the Python code, no explanations:"""
             exec(generated_code, safe_globals, safe_locals)
             processed_data = safe_locals.get("result", [])
         except Exception as code_error:
-            import traceback
-            error_traceback = traceback.format_exc()
-            app.logger.error(f"Code execution error: {str(code_error)}\nGenerated code:\n{generated_code}\nFull traceback:\n{error_traceback}")
-            # Return error immediately instead of continuing with bad data
-            return jsonify({
-                "success": False,
-                "error": f"Failed to process your query. The generated analysis code encountered an error: {str(code_error)}. Please try rephrasing your question or contact support.",
-                "progress": progress_steps
-            }), 500
+            app.logger.error(f"Code execution error: {str(code_error)}")
+            processed_data = {"error": f"Code execution failed: {str(code_error)}"}
         
         # ===== AGENT 3: Analysis =====
         progress_steps.append({"agent": "Agent 3", "status": "Analyzing results..."})
