@@ -1319,9 +1319,8 @@ def build_director_metrics(selected_timeline, period_scope="monthly", tracker_su
         })
 
     # Billing Summary
-    # Split by team_name heuristics because your current schema has no formal business-unit flag
-    gs_team_ids = {t["id"] for t in teams if "global sustainability" in (t.get("team_name", "").lower())}
-    sr_team_ids = {t["id"] for t in teams if ("s&r" in t.get("team_name", "").lower() or "sustain" in t.get("team_name", "").lower())}
+    gs_team_ids = {t["id"] for t in teams if t.get("team_classification_main", "").strip().lower() == "global sustainability"}
+    sr_team_ids = {t["id"] for t in teams if t.get("team_classification_main", "").strip().lower() == "s&r"}
 
     def month_rows_for_team_ids(team_ids_subset):
         rows = []
