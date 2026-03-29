@@ -3144,18 +3144,5 @@
     "case_code": "Z5LB",
     "hours": 8.0,
     "comments": ""
-  },
-  {
-    "id": "SE859",
-    "date": "2026-04-01",
-    "manager_id": "U003",
-    "employee_id": "E001",
-    "staffing_type": "Regular Hours",
-    "project_id": "P001",
-    "project_name": "BCN GS - Carbon (Q1 2026)",
-    "team_id": "T001",
-    "case_code": "J2RC",
-    "hours": 8.0,
-    "comments": ""
   }
 ]
