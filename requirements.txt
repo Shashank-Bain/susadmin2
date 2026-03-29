@@ -3,3 +3,5 @@ openpyxl
 openai
 python-dotenv
 pandas
+requests
+psycopg2-binary
