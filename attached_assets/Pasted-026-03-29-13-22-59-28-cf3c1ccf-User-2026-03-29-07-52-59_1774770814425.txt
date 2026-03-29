@@ -1,0 +1,140 @@
+026-03-29 13:22:59.28
+cf3c1ccf
+User
+[2026-03-29 07:52:59,281] ERROR in app: Code execution error: 'team_id'
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/app.py", line 3310, in api_chat
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+rv = self.dispatch_request()
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+self.handle_request(listener, req, client, addr)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 185, in handle_request
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args) # type: ignore[no-any-return]
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+response = self.full_dispatch_request()
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+return fn(*args, **kwargs)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+return self.wsgi_app(environ, start_response)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/app.py", line 84, in wrapper
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+respiter = self.wsgi(environ, resp.start_response)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+respiter = self.wsgi(environ, resp.start_response)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/app.py", line 84, in wrapper
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+return self.wsgi_app(environ, start_response)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+return fn(*args, **kwargs)
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+response = self.full_dispatch_request()
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args) # type: ignore[no-any-return]
+2026-03-29 13:23:11.57
+cf3c1ccf
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

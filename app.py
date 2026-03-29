@@ -3212,6 +3212,7 @@ Requirements:
 6. Include helpful column names in the result
 7. When filtering by case code, use b.get('case_code') field from billing_entries
 8. For monthly filters like "March", filter dates that start with the year-month (e.g., '2026-03')
+9. CRITICAL: ALWAYS use .get() to access dictionary keys, NEVER use bracket notation like d['key']. Use d.get('key', '') or d.get('key', 0). Data records may have missing keys.
 
 Example output format for tables:
 result = [
@@ -3270,7 +3271,33 @@ Write ONLY the Python code, no explanations:"""
             processed_data = safe_locals.get("result", [])
         except Exception as code_error:
             app.logger.error(f"Code execution error: {str(code_error)}")
-            processed_data = {"error": f"Code execution failed: {str(code_error)}"}
+            retry_prompt = f"""The previous code failed with error: {str(code_error)}
+
+Fix the code. ALWAYS use .get() for dictionary access, NEVER bracket notation.
+For example: d.get('team_id', '') instead of d['team_id']
+
+Original code that failed:
+{generated_code}
+
+Write ONLY the fixed Python code, no explanations:"""
+            try:
+                retry_response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": retry_prompt}],
+                    max_tokens=1500,
+                    temperature=0.2
+                )
+                retry_code = retry_response.choices[0].message.content.strip()
+                if retry_code.startswith("```python"):
+                    retry_code = retry_code.split("```python")[1].split("```")[0].strip()
+                elif retry_code.startswith("```"):
+                    retry_code = retry_code.split("```")[1].split("```")[0].strip()
+                safe_locals2 = {}
+                exec(retry_code, safe_globals, safe_locals2)
+                processed_data = safe_locals2.get("result", [])
+            except Exception as retry_error:
+                app.logger.error(f"Retry code execution error: {str(retry_error)}")
+                processed_data = {"error": f"Code execution failed: {str(code_error)}"}
         
         # ===== AGENT 3: Analysis =====
         progress_steps.append({"agent": "Agent 3", "status": "Analyzing results..."})
