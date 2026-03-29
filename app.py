@@ -3243,6 +3243,15 @@ Write ONLY the Python code, no explanations:"""
         import datetime
         import pandas as pd
         
+        class SafeDict(dict):
+            def __missing__(self, key):
+                return ""
+
+        def make_safe(data):
+            if isinstance(data, list):
+                return [SafeDict(item) if isinstance(item, dict) else item for item in data]
+            return data
+
         safe_globals = {
             "__builtins__": {
                 "__import__": __import__,
@@ -3255,14 +3264,14 @@ Write ONLY the Python code, no explanations:"""
             },
             "datetime": datetime,
             "pd": pd,
-            "users": users,
-            "teams": teams,
-            "employees": employees,
-            "projects": projects,
-            "billing_entries": billing_entries,
-            "staffing_entries": staffing_entries,
-            "billing_rates": billing_rates,
-            "cost_rates": cost_rates,
+            "users": make_safe(users),
+            "teams": make_safe(teams),
+            "employees": make_safe(employees),
+            "projects": make_safe(projects),
+            "billing_entries": make_safe(billing_entries),
+            "staffing_entries": make_safe(staffing_entries),
+            "billing_rates": make_safe(billing_rates),
+            "cost_rates": make_safe(cost_rates),
         }
         safe_locals = {}
         

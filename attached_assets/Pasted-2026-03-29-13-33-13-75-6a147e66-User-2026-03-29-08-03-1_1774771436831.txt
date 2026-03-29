@@ -1,0 +1,76 @@
+2026-03-29 13:33:13.75
+6a147e66
+User
+[2026-03-29 08:03:13,753] ERROR in app: Code execution error: 'team_classification_2'
+2026-03-29 13:33:13.75
+6a147e66
+User
+[2026-03-29 08:03:13,753] ERROR in app: Code execution error: 'team_classification_2'
+2026-03-29 13:33:21.22
+6a147e66
+User
+[2026-03-29 08:03:21,227] ERROR in app: Retry code execution error: 'team_classification_2'
+2026-03-29 13:33:34.42
+6a147e66
+User
+[2026-03-29 08:03:34 +0000] [23] [CRITICAL] WORKER TIMEOUT (pid:34)
+2026-03-29 13:33:34.43
+6a147e66
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:33:34.43
+6a147e66
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:33:34.43
+6a147e66
+User
+^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:33:34.43
+6a147e66
+User
+return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args) # type: ignore[no-any-return]
+2026-03-29 13:33:34.43
+6a147e66
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 1536, in __call__
+2026-03-29 13:33:34.43
+6a147e66
+User
+response = self.full_dispatch_request()
+2026-03-29 13:33:34.43
+6a147e66
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:33:34.43
+6a147e66
+User
+respiter = self.wsgi(environ, resp.start_response)
+2026-03-29 13:33:34.43
+6a147e66
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 185, in handle_request
+2026-03-29 13:33:34.43
+6a147e66
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/gunicorn/workers/sync.py", line 142, in handle
+2026-03-29 13:33:34.43
+6a147e66
+User
+Traceback (most recent call last):
+2026-03-29 13:33:34.43
+6a147e66
+User
+self.handle_request(listener, req, client, addr)
+2026-03-29 13:33:34.43
+6a147e66
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-29 13:33:34.43
+6a147e66
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+2026-03-29 13:33:34.43
+6a147e66
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
