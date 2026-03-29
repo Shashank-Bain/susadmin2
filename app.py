@@ -3093,30 +3093,24 @@ def generate_insync_report_bytes(month):
 @login_required
 def api_chat():
     """
-    Multi-agent chat system:
-    1. Query Understanding Agent - analyzes question and creates filter/cut strategy
-    2. Code Generation Agent - writes Python code to process data
-    3. Analysis Agent - uses processed data to answer (table or insights)
-    4. Formatting Agent - formats the final answer
+    Multi-agent chat system (redesigned):
+    Agent 1 - Data Analyst: understands the query, writes precise Python code using full schema knowledge
+    Agent 2 - Consultant Formatter: takes raw data output and formats as a polished consultant-grade summary
     """
     try:
         data = request.get_json()
         user_query = data.get("message", "").strip()
-        
+
         if not user_query:
             return jsonify({"error": "No message provided"}), 400
-        
-        # Get OpenAI API key from environment variable
+
         openai_api_key = os.environ.get("OPENAI_API_KEY")
         if not openai_api_key:
             return jsonify({"error": "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."}), 500
-        
+
         client = openai.OpenAI(api_key=openai_api_key)
-        
-        # Track progress for user feedback
         progress_steps = []
-        
-        # Gather all relevant data for context
+
         progress_steps.append({"agent": "System", "status": "Reading data..."})
         users = get_users()
         teams = get_teams()
@@ -3126,12 +3120,10 @@ def api_chat():
         staffing_entries = get_staffing_entries()
         billing_rates = get_billing_rates()
         cost_rates = get_cost_rates()
-        
-        # Get current user info
+
         current_user = session.get("user", {})
         user_role = current_user.get("role", "")
-        
-        # Filter data based on user role
+
         if user_role == "MANAGER":
             manager_teams = [t for t in teams if t.get("manager_id") == current_user.get("id")]
             team_ids = {t.get("id") for t in manager_teams}
@@ -3139,118 +3131,104 @@ def api_chat():
             project_ids = {p.get("id") for p in projects}
             billing_entries = [b for b in billing_entries if b.get("project_id") in project_ids]
             staffing_entries = [s for s in staffing_entries if s.get("project_id") in project_ids]
-        
-        # Data schema description
-        data_schema = {
-            "users": "List[Dict] with keys: id, username, first_name, last_name, email, role (ADMIN/DIRECTOR/MANAGER)",
-            "teams": "List[Dict] with keys: id, team_name, manager_id, description",
-            "employees": "List[Dict] with keys: id, name, email, designation, team_id, status",
-            "projects": "List[Dict] with keys: id, project_name, case_code, team_id, manager_id, requestor, billing_region, type_of_project, team_classification_main, team_classification_1, team_classification_2, status",
-            "billing_entries": "List[Dict] with keys: id, project_id, project_name, case_code, date (YYYY-MM-DD string), billing_amount (float), billable_ftes, project_type, manager_id, notes. IMPORTANT: Each entry represents ONE DAY of billable work on a project. Use case_code field to filter by case code (e.g., Z5LB, J2RC). When counting entries, report as 'days worked' or 'billing days', NOT 'cases'.",
-            "staffing_entries": "List[Dict] with keys: id, employee_id, project_id, project_name, date (YYYY-MM-DD string), hours (float), staffing_type (e.g., Regular Hour, Sick Leave). Each entry represents one day of staffing.",
-            "billing_rates": "List[Dict] with keys: id, employee_id, designation, rate_per_day",
-            "cost_rates": "List[Dict] with keys: id, employee_id, designation, cost_per_day"
-        }
-        
-        # ===== AGENT 1: Query Understanding =====
-        progress_steps.append({"agent": "Agent 1", "status": "Understanding query..."})
-        agent1_prompt = f"""You are Agent 1: Query Understanding Agent.
-Analyze the user's question and determine:
-1. What data sources are needed (users, teams, employees, projects, billing_entries, staffing_entries, billing_rates, cost_rates)
-2. What filters should be applied (e.g., date ranges, specific teams, project types)
-3. What aggregations/groupings are needed (e.g., sum by month, group by manager)
-4. Whether the user wants a table output or insights/analysis
 
-Available data schema:
-{json.dumps(data_schema, indent=2)}
+        sample_team = json.dumps(teams[0], indent=2, default=str) if teams else "{}"
+        sample_project = json.dumps(projects[0], indent=2, default=str) if projects else "{}"
+        sample_billing = json.dumps(billing_entries[0], indent=2, default=str) if billing_entries else "{}"
+        sample_staffing = json.dumps(staffing_entries[0], indent=2, default=str) if staffing_entries else "{}"
+        sample_employee = json.dumps(employees[0], indent=2, default=str) if employees else "{}"
+        sample_billing_rate = json.dumps(billing_rates[0], indent=2, default=str) if billing_rates else "{}"
+        sample_cost_rate = json.dumps(cost_rates[0], indent=2, default=str) if cost_rates else "{}"
+
+        progress_steps.append({"agent": "Data Analyst", "status": "Analyzing query & building data model..."})
+
+        agent1_prompt = f"""You are a senior data analyst for a consulting firm's staffing and billing system.
+Your job: understand the user's question and write Python code to extract the answer from the data.
+
+== DATABASE SCHEMA (with sample records) ==
+
+TEAMS ({len(teams)} records) — each team belongs to a classification hierarchy:
+{sample_team}
+KEY FIELDS: id, team_name, team_classification_main (e.g. "Global Sustainability", "S&R"),
+team_classification_1 (sub-group), team_classification_2 (detailed sub-group),
+approved_headcount (float, annual FTE), approved_annual_budget (float, annual $)
+
+PROJECTS ({len(projects)} records) — each project is assigned to a team:
+{sample_project}
+KEY FIELDS: id, project_name, team_id (FK to teams.id), project_type, billing_case_code, region
+
+BILLING_ENTRIES ({len(billing_entries)} records) — each entry = ONE DAY of billable work:
+{sample_billing}
+KEY FIELDS: id, date (YYYY-MM-DD), project_id (FK to projects.id), project_name, case_code,
+billing_amount (float $), billable_ftes (float), project_type, manager_id
+
+STAFFING_ENTRIES ({len(staffing_entries)} records) — each entry = ONE DAY of staffing:
+{sample_staffing}
+KEY FIELDS: id, date (YYYY-MM-DD), employee_id (FK to employees.id), project_id (FK to projects.id),
+team_id (FK to teams.id), staffing_type (e.g. "Regular Hours", "Sick Leave"), hours (float)
+
+EMPLOYEES ({len(employees)} records):
+{sample_employee}
+KEY FIELDS: id, name, designation, team_id (FK to teams.id)
+
+BILLING_RATES ({len(billing_rates)} records):
+{sample_billing_rate}
+KEY FIELDS: id, region, project_type, per_fte_rate
+
+COST_RATES ({len(cost_rates)} records):
+{sample_cost_rate}
+KEY FIELDS: id, designation, per_fte_rate
+
+== RELATIONSHIPS ==
+- billing_entries.project_id -> projects.id -> projects.team_id -> teams.id
+- staffing_entries.team_id -> teams.id (direct)
+- staffing_entries.employee_id -> employees.id -> employees.team_id -> teams.id
+- To get team classification for a billing entry: look up project by project_id, then look up team by project.team_id
+- approved_headcount and approved_annual_budget are on TEAMS (not projects)
+- Monthly budget = approved_annual_budget / 12
+
+== RULES ==
+1. Variables in scope: users, teams, employees, projects, billing_entries, staffing_entries, billing_rates, cost_rates (all List[Dict])
+2. Also available: datetime, pd (pandas), collections module via __import__('collections')
+3. Store final answer in variable called 'result' — must be a list of dicts (table rows)
+4. Use .get() for all dictionary access: d.get('key', '') or d.get('key', 0)
+5. Build lookup dicts for JOINs: project_map = {{p.get('id'): p for p in projects}}
+6. When grouping by team classification, JOIN through the relationships above
+7. Dates are strings 'YYYY-MM-DD'. Filter March as .startswith('2026-03')
+8. Each billing_entry is ONE DAY, not one project. Count entries = count billing days.
+9. For % over/under budget: ((actual - budget) / budget) * 100 if budget > 0
 
 User Question: "{user_query}"
 
-Respond in JSON format:
-{{
-  "data_sources": ["list", "of", "sources"],
-  "filters": {{"description": "what filters to apply"}},
-  "aggregations": {{"description": "how to group/aggregate"}},
-  "output_type": "table" or "insights"
-}}"""
+Write ONLY Python code. No explanations, no markdown fences:"""
 
         response1 = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": agent1_prompt}],
-            response_format={"type": "json_object"},
-            max_tokens=800,
-            temperature=0.3
+            max_tokens=2000,
+            temperature=0.1
         )
-        
-        query_plan = json.loads(response1.choices[0].message.content)
-        
-        # ===== AGENT 2: Code Generation =====
-        progress_steps.append({"agent": "Agent 2", "status": "Filtering data..."})
-        agent2_prompt = f"""You are Agent 2: Code Generation Agent.
-Based on the query plan, write Python code to process the data.
 
-Query Plan:
-{json.dumps(query_plan, indent=2)}
-
-User Question: "{user_query}"
-
-Available variables in scope:
-- users, teams, employees, projects, billing_entries, staffing_entries, billing_rates, cost_rates (all are List[Dict])
-- datetime module is available via code: from datetime import datetime
-
-Data Access Examples:
-- Filter by case_code: [b for b in billing_entries if b.get('case_code') == 'Z5LB']
-- Filter by month: [b for b in billing_entries if b.get('date','').startswith('2026-03')]
-- Sum billing amounts: sum(float(b.get('billing_amount', 0)) for b in filtered_data)
-
-Requirements:
-1. Write clean Python code that processes the data according to the plan
-2. Store the final result in a variable called 'result'
-3. 'result' should be a list of dictionaries (table rows) or a dictionary with summary data
-4. Use pandas if needed: import pandas as pd
-5. Handle date parsing carefully: dates are strings in format 'YYYY-MM-DD'
-6. Include helpful column names in the result
-7. When filtering by case code, use b.get('case_code') field from billing_entries
-8. For monthly filters like "March", filter dates that start with the year-month (e.g., '2026-03')
-9. CRITICAL: ALWAYS use .get() to access dictionary keys, NEVER use bracket notation like d['key']. Use d.get('key', '') or d.get('key', 0). Data records may have missing keys.
-
-Example output format for tables:
-result = [
-  {{"month": "Jan", "total": 1000, "count": 5}},
-  {{"month": "Feb", "total": 1200, "count": 6}}
-]
-
-Write ONLY the Python code, no explanations:"""
-
-        response2 = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": agent2_prompt}],
-            max_tokens=1500,
-            temperature=0.2
-        )
-        
-        generated_code = response2.choices[0].message.content.strip()
-        # Remove code fences if present
+        generated_code = response1.choices[0].message.content.strip()
         if generated_code.startswith("```python"):
             generated_code = generated_code.split("```python")[1].split("```")[0].strip()
         elif generated_code.startswith("```"):
             generated_code = generated_code.split("```")[1].split("```")[0].strip()
-        
-        # Execute the generated code safely
-        progress_steps.append({"agent": "Agent 2", "status": "Processing data..."})
-        
-        # Import modules before exec
-        import datetime
+
+        progress_steps.append({"agent": "Data Analyst", "status": "Executing data model..."})
+
+        import datetime as _dt
         import pandas as pd
-        
+        import collections as _collections
+
         class SafeDict(dict):
             def __missing__(self, key):
                 return ""
 
-        def make_safe(data):
-            if isinstance(data, list):
-                return [SafeDict(item) if isinstance(item, dict) else item for item in data]
-            return data
+        def make_safe(records):
+            if isinstance(records, list):
+                return [SafeDict(item) if isinstance(item, dict) else item for item in records]
+            return records
 
         safe_globals = {
             "__builtins__": {
@@ -3261,9 +3239,12 @@ Write ONLY the Python code, no explanations:"""
                 "sorted": sorted, "enumerate": enumerate, "zip": zip,
                 "range": range, "print": print, "abs": abs, "any": any, "all": all,
                 "isinstance": isinstance, "hasattr": hasattr, "getattr": getattr,
+                "map": map, "filter": filter, "ValueError": ValueError, "KeyError": KeyError,
+                "TypeError": TypeError, "ZeroDivisionError": ZeroDivisionError,
             },
-            "datetime": datetime,
+            "datetime": _dt,
             "pd": pd,
+            "collections": _collections,
             "users": make_safe(users),
             "teams": make_safe(teams),
             "employees": make_safe(employees),
@@ -3273,106 +3254,94 @@ Write ONLY the Python code, no explanations:"""
             "billing_rates": make_safe(billing_rates),
             "cost_rates": make_safe(cost_rates),
         }
-        safe_locals = {}
-        
-        try:
-            exec(generated_code, safe_globals, safe_locals)
-            processed_data = safe_locals.get("result", [])
-        except Exception as code_error:
-            app.logger.error(f"Code execution error: {str(code_error)}")
-            retry_prompt = f"""The previous code failed with error: {str(code_error)}
 
-Fix the code. ALWAYS use .get() for dictionary access, NEVER bracket notation.
-For example: d.get('team_id', '') instead of d['team_id']
+        processed_data = None
+        exec_error_msg = None
 
-Original code that failed:
+        for attempt in range(2):
+            safe_locals = {}
+            try:
+                exec(generated_code, safe_globals, safe_locals)
+                processed_data = safe_locals.get("result", [])
+                break
+            except Exception as code_error:
+                app.logger.error(f"Code execution error (attempt {attempt+1}): {str(code_error)}")
+                if attempt == 0:
+                    retry_prompt = f"""The code failed with: {str(code_error)}
+
+Original code:
 {generated_code}
 
-Write ONLY the fixed Python code, no explanations:"""
-            try:
-                retry_response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": retry_prompt}],
-                    max_tokens=1500,
-                    temperature=0.2
-                )
-                retry_code = retry_response.choices[0].message.content.strip()
-                if retry_code.startswith("```python"):
-                    retry_code = retry_code.split("```python")[1].split("```")[0].strip()
-                elif retry_code.startswith("```"):
-                    retry_code = retry_code.split("```")[1].split("```")[0].strip()
-                safe_locals2 = {}
-                exec(retry_code, safe_globals, safe_locals2)
-                processed_data = safe_locals2.get("result", [])
-            except Exception as retry_error:
-                app.logger.error(f"Retry code execution error: {str(retry_error)}")
-                processed_data = {"error": f"Code execution failed: {str(code_error)}"}
-        
-        # ===== AGENT 3: Analysis =====
-        progress_steps.append({"agent": "Agent 3", "status": "Analyzing results..."})
-        agent3_prompt = f"""You are Agent 3: Analysis Agent.
+Fix it. Remember:
+- Use .get('key', default) for ALL dict access
+- Build lookup maps: project_map = {{p.get('id'): p for p in projects}}
+- team_classification_main, team_classification_1, team_classification_2 are on TEAMS not projects
+- To get team info for a billing entry: project = project_map.get(entry.get('project_id')), then team = team_map.get(project.get('team_id'))
 
-User Question: "{user_query}"
-Output Type: {query_plan.get('output_type', 'table')}
-Processed Data:
-{json.dumps(processed_data, indent=2, default=str)[:3000]}
+Write ONLY fixed Python code:"""
+                    try:
+                        retry_resp = client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            messages=[{"role": "user", "content": retry_prompt}],
+                            max_tokens=2000,
+                            temperature=0.1
+                        )
+                        generated_code = retry_resp.choices[0].message.content.strip()
+                        if generated_code.startswith("```python"):
+                            generated_code = generated_code.split("```python")[1].split("```")[0].strip()
+                        elif generated_code.startswith("```"):
+                            generated_code = generated_code.split("```")[1].split("```")[0].strip()
+                    except Exception:
+                        exec_error_msg = str(code_error)
+                        break
+                else:
+                    exec_error_msg = str(code_error)
 
-IMPORTANT Context:
-- Each billing_entry represents ONE DAY of billable work on a project (not a separate case/project)
-- When you see "count" in the data, interpret it as "days worked" or "billing days"
-- The same project/case_code can have multiple billing entries (one per day of work)
+        if processed_data is None:
+            processed_data = {"error": f"Could not process query: {exec_error_msg}"}
 
-Based on the processed data and user's question:
-- If output_type is "table": Format the data as a clear table with proper context
-- If output_type is "insights": Analyze the data and provide key insights with correct terminology
+        data_str = json.dumps(processed_data, indent=2, default=str)
+        if len(data_str) > 4000:
+            data_str = data_str[:4000] + "\n... (truncated)"
 
-Provide your response:"""
+        progress_steps.append({"agent": "Consultant", "status": "Formatting executive summary..."})
 
-        response3 = client.chat.completions.create(
+        agent2_prompt = f"""You are a senior management consultant at a top-tier firm.
+Format the data below into a polished, executive-ready response.
+
+User's Question: "{user_query}"
+
+Raw Data Output:
+{data_str}
+
+FORMATTING RULES:
+1. If the data is tabular, present it as a clean markdown table with | col | col | separators and alignment row |---|---|
+2. Add currency formatting ($XXX,XXX) for money values
+3. Add percentage formatting (XX.X%) for percentages
+4. Round numbers sensibly (no excessive decimals)
+5. After the table, add a brief "Key Takeaways" section with 2-3 bullet insights
+6. If data has an error or is empty, explain what likely went wrong and suggest how to rephrase
+7. Use plain text section titles (no # headers). Use **bold** for emphasis.
+8. Keep it concise and professional — this is for a director reviewing team performance
+
+Format the response now:"""
+
+        response2 = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": agent3_prompt}],
-            max_tokens=1500,
-            temperature=0.5
-        )
-        
-        analysis_result = response3.choices[0].message.content
-        
-        # ===== AGENT 4: Formatting =====
-        progress_steps.append({"agent": "Agent 4", "status": "Formatting answer..."})
-        agent4_prompt = f"""You are Agent 4: Formatting Agent.
-
-Your job is to format the answer as clean, readable PLAIN TEXT with:
-- Clear section titles (but NO markdown headers like ## or #)
-- Well-formatted tables (use markdown table syntax | col1 | col2 |)
-- Bullet points using - or • for insights
-- Proper spacing and line breaks for readability
-- Bold text using **text** if needed for emphasis
-
-DO NOT USE: Markdown headers (##, ###, #) - they show up as literal text
-USE INSTEAD: Plain text section titles with blank lines for separation
-
-Original Question: "{user_query}"
-Analysis Result:
-{analysis_result}
-
-Format this into a polished, professional response with proper plain text formatting:"""
-
-        response4 = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": agent4_prompt}],
+            messages=[{"role": "user", "content": agent2_prompt}],
             max_tokens=2000,
             temperature=0.3
         )
-        
-        final_answer = response4.choices[0].message.content
+
+        final_answer = response2.choices[0].message.content
         progress_steps.append({"agent": "Complete", "status": "Done"})
-        
+
         return jsonify({
             "success": True,
             "message": final_answer,
             "progress": progress_steps
         })
-        
+
     except Exception as e:
         app.logger.error(f"Chat API error: {str(e)}")
         return jsonify({"error": f"Error processing chat request: {str(e)}"}), 500
