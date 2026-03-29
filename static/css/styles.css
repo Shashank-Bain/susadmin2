@@ -70,8 +70,8 @@ textarea {
 }
 
 .brand-mark {
-  width: 28px;
-  height: 28px;
+  width: 56px;
+  height: 56px;
   flex: 0 0 auto;
   background: url('../images/logo.svg') no-repeat center / contain;
 }
@@ -176,6 +176,7 @@ textarea {
 
 .brand-title {
   font-weight: 800;
+  font-size: 1.6em;
 }
 
 .brand-subtitle {
