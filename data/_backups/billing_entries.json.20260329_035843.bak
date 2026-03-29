@@ -790,17 +790,5 @@
     "billable_ftes": 1.0,
     "billing_amount": 240.0,
     "comments": ""
-  },
-  {
-    "id": "BE235",
-    "date": "2026-04-01",
-    "manager_id": "U003",
-    "project_id": "P001",
-    "project_name": "BCN GS - Carbon (Q1 2026)",
-    "project_type": "IP (Z5LB/J2RC)",
-    "case_code": "J2RC",
-    "billable_ftes": 1.0,
-    "billing_amount": 240.0,
-    "comments": ""
   }
 ]
