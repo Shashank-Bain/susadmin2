@@ -3,11 +3,22 @@ from functools import wraps
 from datetime import datetime, timedelta
 from io import StringIO, BytesIO
 import csv, os, json, zipfile
-from utils.json_db import load_json, save_json
+from utils.db import (
+    get_users, save_users,
+    get_teams, save_teams,
+    get_employees, save_employees,
+    get_projects, save_projects,
+    get_billing_entries, save_billing_entries,
+    get_staffing_entries, save_staffing_entries,
+    get_billing_rates, save_billing_rates,
+    get_cost_rates, save_cost_rates,
+    get_reports, save_reports,
+    get_dropdown_options, save_dropdown_options,
+    get_insync_employee_orders, save_insync_employee_orders,
+)
 import openai
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
@@ -16,31 +27,6 @@ app.secret_key = "change-this-in-production"
 DATA_DIR = "data"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-def data_path(name): return f"{DATA_DIR}/{name}"
-def get_users(): return load_json(data_path("users.json"), [])
-def get_teams(): return load_json(data_path("teams.json"), [])
-def get_employees(): return load_json(data_path("employees.json"), [])
-def get_projects(): return load_json(data_path("projects.json"), [])
-def get_billing_rates(): return load_json(data_path("billing_rates.json"), [])
-def get_cost_rates(): return load_json(data_path("cost_rates.json"), [])
-def get_staffing_entries(): return load_json(data_path("staffing_entries.json"), [])
-def get_billing_entries(): return load_json(data_path("billing_entries.json"), [])
-def get_reports(): return load_json(data_path("reports.json"), [])
-def get_insync_employee_orders(): return load_json(data_path("insync_employee_orders.json"), {})
-def get_dropdown_options(): return load_json(data_path("dropdown_options.json"), {})
-
-def save_staffing_entries(rows): save_json(data_path("staffing_entries.json"), rows)
-def save_billing_entries(rows): save_json(data_path("billing_entries.json"), rows)
-def save_projects(rows): save_json(data_path("projects.json"), rows)
-def save_users(rows): save_json(data_path("users.json"), rows)
-def save_teams(rows): save_json(data_path("teams.json"), rows)
-def save_employees(rows): save_json(data_path("employees.json"), rows)
-def save_billing_rates(rows): save_json(data_path("billing_rates.json"), rows)
-def save_cost_rates(rows): save_json(data_path("cost_rates.json"), rows)
-def save_reports(rows): save_json(data_path("reports.json"), rows)
-def save_insync_employee_orders(rows): save_json(data_path("insync_employee_orders.json"), rows)
-def save_dropdown_options(rows): save_json(data_path("dropdown_options.json"), rows)
 
 FULL_PROJECT_FIELDS = [
     "project_name","project_type","type_for_util","billing_case_code","client_case_code","work_description","product","requestor",
@@ -239,12 +225,23 @@ def admin_home():
 @login_required
 @roles_required("ADMIN")
 def admin_backup_download():
+    backup_data = {
+        "users.json": get_users(),
+        "teams.json": get_teams(),
+        "employees.json": get_employees(),
+        "projects.json": get_projects(),
+        "billing_entries.json": get_billing_entries(),
+        "staffing_entries.json": get_staffing_entries(),
+        "billing_rates.json": get_billing_rates(),
+        "cost_rates.json": get_cost_rates(),
+        "reports.json": get_reports(),
+        "dropdown_options.json": get_dropdown_options(),
+        "insync_employee_orders.json": get_insync_employee_orders(),
+    }
     mem_zip = BytesIO()
     with zipfile.ZipFile(mem_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for filename in sorted(os.listdir(DATA_DIR)):
-            if filename.endswith('.json'):
-                filepath = os.path.join(DATA_DIR, filename)
-                zf.write(filepath, filename)
+        for filename, data in backup_data.items():
+            zf.writestr(filename, json.dumps(data, indent=2, default=str))
     mem_zip.seek(0)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return send_file(mem_zip, mimetype='application/zip', as_attachment=True, download_name=f"bcn_backup_{timestamp}.zip")
