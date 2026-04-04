@@ -808,6 +808,132 @@ def get_director_timeline_options(period_scope):
         for y, m in month_set
     ]
 
+def get_period_bounds(period_scope, selected_timeline):
+    period_scope = (period_scope or "monthly").strip().lower()
+    today = datetime.now().date()
+
+    if period_scope == "weekly":
+        try:
+            week_start = datetime.strptime(selected_timeline, "%Y-%m-%d").date()
+        except Exception:
+            week_start = today - timedelta(days=today.weekday())
+        return week_start, week_start + timedelta(days=4)
+
+    if period_scope == "ytd":
+        try:
+            selected_year = int(selected_timeline)
+        except Exception:
+            selected_year = today.year
+        return datetime(selected_year, 1, 1).date(), datetime(selected_year, 12, 31).date()
+
+    selected_year, selected_month_num = parse_selected_month(selected_timeline)
+    start_date = datetime(selected_year, selected_month_num, 1).date()
+    if selected_month_num == 12:
+        end_date = datetime(selected_year + 1, 1, 1).date() - timedelta(days=1)
+    else:
+        end_date = datetime(selected_year, selected_month_num + 1, 1).date() - timedelta(days=1)
+    return start_date, end_date
+
+def build_fte_rows(start_date, end_date, manager_id=None):
+    staffing_entries = get_staffing_entries()
+    employees = get_employees()
+    teams = get_teams()
+    projects = get_projects()
+    cost_rates = get_cost_rates()
+
+    employee_map = {e.get("id"): e for e in employees if e.get("id")}
+    team_map = {t.get("id"): t for t in teams if t.get("id")}
+    project_map = {p.get("id"): p for p in projects if p.get("id")}
+    designation_rate_map = {
+        (r.get("designation") or "").strip().lower(): safe_float(r.get("per_fte_rate", 0))
+        for r in cost_rates
+    }
+
+    employee_day_total_hours = {}
+    employee_day_team_hours = {}
+
+    for row in staffing_entries:
+        if manager_id and row.get("manager_id") != manager_id:
+            continue
+
+        dt = parse_date(row.get("date", ""))
+        if not dt or dt < start_date or dt > end_date:
+            continue
+
+        employee_id = row.get("employee_id", "")
+        if not employee_id:
+            continue
+
+        hours = safe_float(row.get("hours", 0))
+        if hours <= 0:
+            continue
+
+        resolved_team_id = resolve_staffing_team_id(row, project_map, employee_map) or ""
+        day_key = (employee_id, dt)
+        team_key = (employee_id, dt, resolved_team_id)
+
+        employee_day_total_hours[day_key] = employee_day_total_hours.get(day_key, 0.0) + hours
+        employee_day_team_hours[team_key] = employee_day_team_hours.get(team_key, 0.0) + hours
+
+    aggregated = {}
+    for (employee_id, dt, team_id), team_hours in employee_day_team_hours.items():
+        total_hours = employee_day_total_hours.get((employee_id, dt), 0.0)
+        if total_hours <= 0:
+            continue
+
+        day_fraction = team_hours / total_hours
+
+        employee = employee_map.get(employee_id, {})
+        designation = employee.get("designation", "")
+        bill_rate = designation_rate_map.get(designation.strip().lower(), 0.0)
+
+        team = team_map.get(team_id, {})
+        month = month_label(datetime(dt.year, dt.month, 1))
+        key = (
+            month,
+            team.get("team_classification_main", ""),
+            team.get("team_classification_1", ""),
+            team.get("team_classification_2", ""),
+            employee.get("name", employee_id),
+            designation,
+            bill_rate,
+        )
+        aggregated[key] = aggregated.get(key, 0.0) + day_fraction
+
+    rows = []
+    for (
+        month,
+        team_class_main,
+        team_class_1,
+        team_class_2,
+        employee_name,
+        designation,
+        bill_rate,
+    ), working_days in aggregated.items():
+        rows.append(
+            {
+                "month": month,
+                "team_classification_main": team_class_main,
+                "team_classification_1": team_class_1,
+                "team_classification_2": team_class_2,
+                "name": employee_name,
+                "designation": designation,
+                "bill_rate_per_day": round(bill_rate, 2),
+                "working_days": round(working_days, 2),
+            }
+        )
+
+    rows.sort(
+        key=lambda r: (
+            datetime.strptime(r["month"], "%b %Y"),
+            r["team_classification_main"].lower(),
+            r["team_classification_1"].lower(),
+            r["team_classification_2"].lower(),
+            r["name"].lower(),
+        )
+    )
+    return rows
+
 def build_director_gantt(active_view="weekly", anchor_date=None, manager_filter=None, 
                          team_class_main_filter=None, team_class_1_filter=None, team_class_2_filter=None):
     """Build gantt data for director project view with filtering support."""
@@ -1681,7 +1807,7 @@ def build_director_metrics(selected_timeline, period_scope="monthly", tracker_su
 @login_required
 @roles_required("DIRECTOR")
 def director_home():
-    allowed_views = {"scorecard", "billing", "martha", "tracker", "project_gantt", "chat"}
+    allowed_views = {"scorecard", "billing", "martha", "tracker", "project_gantt", "chat", "fte"}
     view_candidates = request.args.getlist("view") or ["scorecard"]
     active_view = "scorecard"
     for candidate in reversed(view_candidates):
@@ -1710,6 +1836,7 @@ def director_home():
         selected_timeline = timeline_options[-1]["value"] if timeline_options else ""
     
     metrics = None
+    fte_rows = []
     gantt_data = None
     manager_options = []
     team_class_main_options = []
@@ -1776,6 +1903,9 @@ def director_home():
         
         team_class_2_vals = {t.get("team_classification_2") for t in teams if t.get("team_classification_2")}
         team_class_2_options = ["All"] + sorted([v for v in team_class_2_vals if v])
+    elif active_view == "fte":
+        start_date, end_date = get_period_bounds(period_scope, selected_timeline)
+        fte_rows = build_fte_rows(start_date, end_date)
     else:
         # Original director metrics views
         metrics = build_director_metrics(selected_timeline, period_scope, tracker_summary)
@@ -1783,6 +1913,7 @@ def director_home():
     return render_template(
         "director_home.html",
         metrics=metrics,
+        fte_rows=fte_rows,
         gantt_data=gantt_data,
         selected_timeline=selected_timeline,
         timeline_options=timeline_options,
@@ -1809,7 +1940,7 @@ def director_home():
 def manager_home():
     user = session["user"]
     manager_tab = request.args.get("tab", "dashboard").strip().lower()
-    if manager_tab not in ["dashboard", "overview", "chat"]:
+    if manager_tab not in ["dashboard", "overview", "chat", "fte"]:
         manager_tab = "dashboard"
 
     teams = [t for t in get_teams() if t.get("manager_id") == user["id"]]
@@ -1943,6 +2074,29 @@ def manager_home():
     overview_month_label = anchor_date.strftime("%b %Y")
     overview_working_days = working_days_in_month(anchor_date.year, anchor_date.month)
     overview_manager_tables = []
+    manager_fte_rows = []
+
+    month_options = []
+    month_set = set()
+    for row in manager_staffing:
+        dt = parse_date(row.get("date", ""))
+        if dt:
+            month_set.add((dt.year, dt.month))
+    if not month_set:
+        month_set.add((today.year, today.month))
+    month_options = [datetime(y, m, 1).strftime("%b %Y") for y, m in sorted(month_set)]
+    selected_fte_month = request.args.get("month", "").strip()
+    if selected_fte_month not in month_options:
+        selected_fte_month = month_options[-1]
+
+    if manager_tab == "fte":
+        selected_year, selected_month_num = parse_selected_month(selected_fte_month)
+        fte_start_date = datetime(selected_year, selected_month_num, 1).date()
+        if selected_month_num == 12:
+            fte_end_date = datetime(selected_year + 1, 1, 1).date() - timedelta(days=1)
+        else:
+            fte_end_date = datetime(selected_year, selected_month_num + 1, 1).date() - timedelta(days=1)
+        manager_fte_rows = build_fte_rows(fte_start_date, fte_end_date, manager_id=user["id"])
 
     if manager_tab == "overview":
         overview_gantt = build_director_gantt(active_view=active_view, anchor_date=anchor_date)
@@ -2322,6 +2476,9 @@ def manager_home():
         overview_month_label=overview_month_label,
         overview_working_days=overview_working_days,
         overview_manager_tables=overview_manager_tables,
+        manager_fte_rows=manager_fte_rows,
+        manager_fte_month_options=month_options,
+        selected_fte_month=selected_fte_month,
         staffing_rows=staffing_rows,
         week_day_labels=week_day_labels,
         week_date_labels=week_date_labels,

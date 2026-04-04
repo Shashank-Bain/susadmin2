@@ -235,6 +235,61 @@
   </div>
   {% endfor %}
 </div>
+{% elif manager_tab == 'fte' %}
+<div class="glass section-card">
+  <div class="section-head row-between">
+    <div>
+      <h2>FTE Data</h2>
+      <p>Working days are split across teams when the same person is staffed across multiple teams in a day.</p>
+    </div>
+    <form method="get" id="manager-fte-month-form" class="inline-toolbar">
+      <input type="hidden" name="tab" value="fte">
+      <label for="manager-fte-month" style="font-size:12px; opacity:0.8;">Month</label>
+      <select id="manager-fte-month" name="month" class="glass-input small-select" onchange="submitFormById('manager-fte-month-form')">
+        {% for month_opt in manager_fte_month_options %}
+        <option value="{{ month_opt }}" {% if month_opt == selected_fte_month %}selected{% endif %}>{{ month_opt }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <div class="table-scroll">
+    <table class="data-table compact">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Team Classification Main</th>
+          <th>Team Classification 1</th>
+          <th>Team Classification 2</th>
+          <th>Name</th>
+          <th>Designation</th>
+          <th>Bill rate/day</th>
+          <th>Working Days</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if manager_fte_rows %}
+          {% for row in manager_fte_rows %}
+          <tr>
+            <td>{{ row.month }}</td>
+            <td>{{ row.team_classification_main }}</td>
+            <td>{{ row.team_classification_1 }}</td>
+            <td>{{ row.team_classification_2 }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.designation }}</td>
+            <td>{{ "%.2f"|format(row.bill_rate_per_day) }}</td>
+            <td>{{ "%.2f"|format(row.working_days) }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8">No FTE rows available for the selected month.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% elif manager_tab == 'chat' %}
 <div class="glass section-card">
   <div class="section-head">

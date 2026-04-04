@@ -38,11 +38,13 @@
               <a class="nav-link {% if '/director' in request.path and request.args.get('view') == 'billing' %}active{% endif %}" href="{{ url_for('director_home', view='billing') }}">Billing Summary</a>
               <a class="nav-link {% if '/director' in request.path and request.args.get('view') == 'martha' %}active{% endif %}" href="{{ url_for('director_home', view='martha') }}">Martha Monthly</a>
               <a class="nav-link {% if '/director' in request.path and request.args.get('view') == 'tracker' %}active{% endif %}" href="{{ url_for('director_home', view='tracker') }}">Billing Tracker</a>
+              <a class="nav-link {% if '/director' in request.path and request.args.get('view') == 'fte' %}active{% endif %}" href="{{ url_for('director_home', view='fte', period_scope='monthly') }}">FTE Data</a>
               <a class="nav-link {% if '/director' in request.path and request.args.get('view') == 'project_gantt' %}active{% endif %}" href="{{ url_for('director_home', view='project_gantt') }}">Project Gantt</a>
               <a class="nav-link {% if '/director' in request.path and request.args.get('view') == 'chat' %}active{% endif %}" href="{{ url_for('director_home', view='chat') }}">Chat</a>
             {% elif current_user.role == "MANAGER" %}
               <a class="nav-link {% if '/manager' in request.path and request.args.get('tab') != 'overview' and request.args.get('tab') != 'chat' %}active{% endif %}" href="{{ url_for('manager_home') }}">Manager Home</a>
               <a class="nav-link {% if '/manager' in request.path and request.args.get('tab') == 'overview' %}active{% endif %}" href="{{ url_for('manager_home', tab='overview') }}">Overview</a>
+              <a class="nav-link {% if '/manager' in request.path and request.args.get('tab') == 'fte' %}active{% endif %}" href="{{ url_for('manager_home', tab='fte') }}">FTE Data</a>
               <a class="nav-link {% if '/manager/projects' in request.path %}active{% endif %}" href="{{ url_for('manager_projects') }}">My Projects</a>
               <a class="nav-link {% if '/manager' in request.path and request.args.get('tab') == 'chat' %}active{% endif %}" href="{{ url_for('manager_home', tab='chat') }}">Chat</a>
             {% endif %}
